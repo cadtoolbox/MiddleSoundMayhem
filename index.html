@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Middle Sound Mayhem</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #87CEEB;
+        }
+        #gameContainer {
+            text-align: center;
+            position: relative;
+        }
+        #scoreContainer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px 0;
+        }
+        #score {
+            font-size: 24px;
+            margin: 0 10px 0 0;
+        }
+        #hitCounter {
+            font-size: 24px;
+            margin: 0 0 0 10px;
+        }
+        #gameTitle {
+            font-size: 36px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        #speedometer {
+            font-size: 18px;
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        #crossingAlert {
+            font-size: 24px;
+            color: white;
+            position: absolute;
+            width: 400px;
+            text-align: center;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            text-shadow: 2px 2px 4px #000;
+        }
+        #countdown {
+            font-size: 48px;
+            color: white;
+            position: absolute;
+            width: 400px;
+            text-align: center;
+            top: 50%;
+            transform: translateY(-50%);
+            display: none;
+        }
+        #gameOver {
+            font-size: 48px;
+            position: absolute;
+            width: 400px;
+            text-align: center;
+            top: 50%;
+            transform: translateY(-50%);
+            display: none;
+            text-shadow: 2px 2px 4px #000;
+        }
+        #controls {
+            margin-top: 10px;
+        }
+        button {
+            padding: 5px 10px;
+            margin: 0 5px;
+            font-size: 16px;
+        }
+        .flash {
+            animation: flash 0.5s infinite;
+        }
+        .winFlash {
+            animation: winFlash 0.5s 6;
+        }
+        @keyframes flash {
+            0% { opacity: 1; }
+            50% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        @keyframes winFlash {
+            0% { color: white; }
+            50% { color: red; }
+            100% { color: white; }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="gameTitle">Middle Sound Mayhem</div>
+        <div id="speedometer">Speed: 0</div>
+        <div id="scoreContainer">
+            <div id="score">Score: 0</div>
+            <div id="hitCounter">Hits: 0</div>
+        </div>
+        <canvas id="gameCanvas" width="400" height="600"></canvas>
+        <div id="crossingAlert">Golf Cart Crossing!</div>
+        <div id="countdown"></div>
+        <div id="gameOver"></div>
+        <div id="controls">
+            <button id="startBtn">Start</button>
+            <button id="increaseTraffic">+ Traffic</button>
+            <button id="decreaseTraffic">- Traffic</button>
+            <button id="increaseSpeed">+ Speed</button>
+            <button id="decreaseSpeed">- Speed</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score');
+        const crossingAlert = document.getElementById('crossingAlert');
+        const countdownDisplay = document.getElementById('countdown');
+        const speedometer = document.getElementById('speedometer');
+        const hitCounter = document.getElementById('hitCounter');
+        const gameOverDisplay = document.getElementById('gameOver');
+        const startBtn = document.getElementById('startBtn');
+        const increaseTrafficBtn = document.getElementById('increaseTraffic');
+        const decreaseTrafficBtn = document.getElementById('decreaseTraffic');
+        const increaseSpeedBtn = document.getElementById('increaseSpeed');
+        const decreaseSpeedBtn = document.getElementById('decreaseSpeed');
+
+        // Audio setup
+        let audioInitialized = false;
+        const tireNoise = new Audio('https://www.myinstants.com/media/sounds/long-brain-fart.mp3');
+        tireNoise.loop = true;
+        tireNoise.volume = 0.04;
+        const pointSound = new Audio('https://www.myinstants.com/media/sounds/discord-notification.mp3');
+        pointSound.volume = 0.5;
+        const crashSound = new Audio('https://www.myinstants.com/media/sounds/punch-gaming-sound-effect-hd_RzlG1GE.mp3');
+        crashSound.volume = 0.5;
+        const kidsYelling = new Audio('https://www.myinstants.com/media/sounds/movie_1.mp3');
+        kidsYelling.volume = 0.4;
+        const dogBark = new Audio('https://www.myinstants.com/media/sounds/m-e-o-w.mp3');
+        dogBark.volume = 0.1;
+        const sirenSound = new Audio('https://www.myinstants.com/media/sounds/11900601.mp3');
+        sirenSound.volume = 0.8;
+        const introMusic = new Audio('https://www.myinstants.com/media/sounds/outro-song_oqu8zAg.mp3');
+        introMusic.volume = 0.5;
+        introMusic.loop = true;
+        const winSound = new Audio('https://www.myinstants.com/media/sounds/victory-mario-series-hq-super-smash-bros.mp3');
+        winSound.volume = 0.5;
+        const schoolBusSound = new Audio('https://www.myinstants.com/media/sounds/seatbelts-everyone.mp3');
+        schoolBusSound.volume = 0.5;
+        const nikkiSignSound = new Audio('https://www.myinstants.com/media/sounds/siri-i-have-voted.mp3');
+        nikkiSignSound.volume = 0.5;
+        const shootSound = new Audio('https://www.myinstants.com/media/sounds/064-laser-thum_hYpSdXS.mp3');
+        shootSound.volume = 0.5;
+        const destroySound = new Audio('https://www.myinstants.com/media/sounds/roblox-death-sound-oof-sound-effect.mp3');
+        destroySound.volume = 0.5;
+
+        let score = 0;
+        let hitCount = 0;
+        let schoolBusCount = 0; // Track school bus spawns
+        const maxHits = 25;
+        const winScore = 500;
+        const player = {
+            x: canvas.width / 2 - 20,
+            y: canvas.height - 80,
+            width: 40,
+            height: 60,
+            speed: 5
+        };
+
+        const obstacles = [];
+        const bullets = [];
+        const explosions = []; // Array for explosion effects
+        const obstacleTypes = [
+            {type: 'car', width: 40, height: 60, color: '#FF0000', details: true},
+            {type: 'ebike', width: 20, height: 40, color: '#0000FF', details: true},
+            {type: 'golfcart', width: 50, height: 50, color: '#00FF00', details: true},
+            {type: 'biker', width: 20, height: 40, color: '#800080', details: true},
+            {type: 'jogger', width: 20, height: 30, color: '#FFA500', details: true},
+            {type: 'deer', width: 30, height: 40, color: '#8B4513', details: true},
+            {type: 'dog', width: 25, height: 25, color: '#808080', details: true},
+            {type: 'schoolbus', width: 50, height: 80, color: '#FFFF00', details: true},
+            {type: 'police', width: 40, height: 60, color: '#000000', details: true}
+        ];
+
+        let keys = {};
+        let roadOffset = 0;
+        let trafficCircleActive = false;
+        let trafficCircleY = -600;
+        let timeSinceLastCircle = 0;
+        let timeSinceLastCrossing = 0;
+        let crossingGolfCart = null;
+        let lightFlash = true;
+        let flashTimer = 0;
+        let gameRunning = false;
+        let countdown = 0;
+        let trafficRate = 0.03;
+        let speedMultiplier = 1;
+        let timeSinceLastSign = 0;
+        let timeSinceLastSchoolCrossing = 0;
+        let schoolCrossings = [];
+        let roadKill = [];
+        const campaignSigns = [];
+
+        window.addEventListener('load', () => {
+            introMusic.play().catch(err => console.log("Intro music on load failed:", err));
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (gameRunning) {
+                e.preventDefault();
+                keys[e.key] = true;
+                if (e.key === 'ArrowUp' && gameRunning) {
+                    shootSound.play().catch(err => console.log("Shoot sound failed:", err));
+                    spawnBullet();
+                }
+                if (!tireNoise.paused) return;
+                tireNoise.play().catch(err => console.log("Tire noise failed:", err));
+            }
+        });
+        document.addEventListener('keyup', (e) => keys[e.key] = false);
+
+        startBtn.addEventListener('click', startGame);
+        increaseTrafficBtn.addEventListener('click', () => trafficRate = Math.min(0.1, trafficRate + 0.01));
+        decreaseTrafficBtn.addEventListener('click', () => trafficRate = Math.max(0.01, trafficRate - 0.01));
+        increaseSpeedBtn.addEventListener('click', () => speedMultiplier = Math.min(2, speedMultiplier + 0.2));
+        decreaseSpeedBtn.addEventListener('click', () => speedMultiplier = Math.max(0.5, speedMultiplier - 0.2));
+
+        function spawnBullet() {
+            const bullet = {
+                x: player.x + player.width / 2 - 2.5,
+                y: player.y - 10,
+                width: 5,
+                height: 10,
+                speed: 10 * speedMultiplier,
+                color: '#FF0000'
+            };
+            bullets.push(bullet);
+        }
+
+        function spawnExplosion(x, y) {
+            const explosion = {
+                x: x,
+                y: y,
+                radius: 10,
+                maxRadius: 30,
+                duration: 0.5, // Seconds
+                time: 0,
+                color: '#FF4500' // Orange-red explosion
+            };
+            explosions.push(explosion);
+            destroySound.play().catch(err => console.log("Destroy sound failed:", err));
+        }
+
+        function spawnObstacle() {
+            const type = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
+            obstacles.push({
+                x: Math.random() * (canvas.width - type.width),
+                y: -type.height,
+                width: type.width,
+                height: type.height,
+                color: type.color,
+                speed: (3 + Math.random() * 2) * speedMultiplier,
+                passed: false,
+                type: type.type,
+                barked: false,
+                soundPlayed: false
+            });
+            if (type.type === 'police') {
+                sirenSound.play().catch(err => console.log("Siren failed:", err));
+            } else if (type.type === 'schoolbus') {
+                schoolBusCount++;
+                if (schoolBusCount % 3 === 0) {
+                    schoolBusSound.play().catch(err => console.log("School bus sound failed:", err));
+                }
+            }
+        }
+
+        function spawnCrossingGolfCart() {
+            crossingGolfCart = {
+                x: -50,
+                y: canvas.height / 2,
+                width: 50,
+                height: 50,
+                color: '#00FF00',
+                speed: 4 * speedMultiplier,
+                type: 'golfcart',
+                crossing: true,
+                passed: false
+            };
+            crossingAlert.style.display = 'block';
+            crossingAlert.classList.add('flash');
+            kidsYelling.play().catch(err => console.log("Kids yelling failed:", err));
+            setTimeout(() => {
+                crossingAlert.style.display = 'none';
+                crossingAlert.classList.remove('flash');
+            }, 2000);
+        }
+
+        function spawnCampaignSign() {
+            const side = Math.random() < 0.5 ? 'left' : 'right';
+            campaignSigns.push({
+                x: side === 'left' ? 10 : canvas.width - 40,
+                y: -40,
+                width: 30,
+                height: 40,
+                speed: 2 * speedMultiplier
+            });
+            nikkiSignSound.play().catch(err => console.log("Nikki sign sound failed:", err));
+        }
+
+        function spawnSchoolCrossing() {
+            schoolCrossings.push({
+                y: -20,
+                speed: 2 * speedMultiplier
+            });
+        }
+
+        function spawnRoadKill() {
+            roadKill.push({
+                x: 50 + Math.random() * (canvas.width - 100),
+                y: -20,
+                width: 20,
+                height: 10,
+                speed: 2 * speedMultiplier
+            });
+        }
+
+        function checkCollision(obj1, obj2) {
+            return obj1.x < obj2.x + obj2.width &&
+                   obj1.x + obj1.width > obj2.x &&
+                   obj1.y < obj2.y + obj2.height &&
+                   obj1.y + obj1.height > obj2.y;
+        }
+
+        function resetGame() {
+            score = 0;
+            hitCount = 0;
+            schoolBusCount = 0;
+            player.x = canvas.width / 2 - 20;
+            obstacles.length = 0;
+            bullets.length = 0;
+            explosions.length = 0;
+            campaignSigns.length = 0;
+            schoolCrossings.length = 0;
+            roadKill.length = 0;
+            crossingGolfCart = null;
+            trafficCircleActive = false;
+            trafficCircleY = -600;
+            timeSinceLastCircle = 0;
+            timeSinceLastCrossing = 0;
+            timeSinceLastSign = 0;
+            timeSinceLastSchoolCrossing = 0;
+            scoreDisplay.textContent = `Score: ${score}`;
+            hitCounter.textContent = `Hits: ${hitCount}`;
+            gameOverDisplay.style.display = 'none';
+            gameOverDisplay.classList.remove('winFlash');
+            tireNoise.pause();
+            tireNoise.currentTime = 0;
+            sirenSound.pause();
+            sirenSound.currentTime = 0;
+            introMusic.play().catch(err => console.log("Intro music reset failed:", err));
+        }
+
+        function startGame() {
+            resetGame();
+            gameRunning = false;
+
+            if (!audioInitialized) {
+                introMusic.play().then(() => {
+                    introMusic.pause();
+                    introMusic.currentTime = 0;
+                    audioInitialized = true;
+                    introMusic.play().catch(err => console.log("Intro music after init failed:", err));
+                }).catch(err => console.log("Audio init failed:", err));
+            }
+
+            countdown = 3;
+            countdownDisplay.style.display = 'block';
+            startBtn.textContent = "Restart";
+            let countdownInterval = setInterval(() => {
+                countdown--;
+                countdownDisplay.textContent = countdown > 0 ? countdown : 'GO!';
+                if (countdown <= 0) {
+                    clearInterval(countdownInterval);
+                    setTimeout(() => {
+                        countdownDisplay.style.display = 'none';
+                        gameRunning = true;
+                        introMusic.pause();
+                        introMusic.currentTime = 0;
+                        spawnObstacle();
+                    }, 500);
+                }
+            }, 1000);
+        }
+
+        function endGame(isWin = false) {
+            gameRunning = false;
+            gameOverDisplay.textContent = isWin ? "You Win! You made it to Starbucks!" : "Game Over";
+            gameOverDisplay.style.display = 'block';
+            if (isWin) {
+                gameOverDisplay.classList.add('winFlash');
+                winSound.play().catch(err => console.log("Win sound failed:", err));
+            }
+            startBtn.textContent = "Start";
+            tireNoise.pause();
+            tireNoise.currentTime = 0;
+            sirenSound.pause();
+            sirenSound.currentTime = 0;
+            introMusic.play().catch(err => console.log("Intro music end failed:", err));
+        }
+
+        function update() {
+            if (!gameRunning) return;
+
+            if (keys['ArrowLeft'] && player.x > 50) player.x -= player.speed;
+            if (keys['ArrowRight'] && player.x < canvas.width - 50 - player.width) player.x += player.speed;
+
+            roadOffset += 2 * speedMultiplier;
+            if (roadOffset > 40) roadOffset = 0;
+
+            speedometer.textContent = `Speed: ${Math.round(speedMultiplier * 50)}`;
+
+            flashTimer += 1/60;
+            if (flashTimer > 0.5) {
+                lightFlash = !lightFlash;
+                flashTimer = 0;
+            }
+
+            // Update bullets and check collisions
+            const bulletsToRemove = [];
+            const obstaclesToRemove = [];
+
+            for (let i = 0; i < bullets.length; i++) {
+                bullets[i].y -= bullets[i].speed;
+
+                for (let j = 0; j < obstacles.length; j++) {
+                    if (checkCollision(bullets[i], obstacles[j])) {
+                        spawnExplosion(obstacles[j].x + obstacles[j].width / 2, obstacles[j].y + obstacles[j].height / 2);
+                        score += 2;
+                        scoreDisplay.textContent = `Score: ${score}`;
+                        bulletsToRemove.push(i);
+                        obstaclesToRemove.push(j);
+                        if (score >= winScore) endGame(true);
+                        break;
+                    }
+                }
+
+                if (bullets[i] && bullets[i].y < 0) bulletsToRemove.push(i);
+            }
+
+            bulletsToRemove.sort((a, b) => b - a).forEach(index => bullets.splice(index, 1));
+            obstaclesToRemove.sort((a, b) => b - a).forEach(index => obstacles.splice(index, 1));
+
+            // Update explosions
+            for (let i = explosions.length - 1; i >= 0; i--) {
+                explosions[i].time += 1/60; // Assuming 60 FPS
+                explosions[i].radius += (explosions[i].maxRadius - 10) / (explosions[i].duration * 60);
+                if (explosions[i].time >= explosions[i].duration) {
+                    explosions.splice(i, 1);
+                }
+            }
+
+            timeSinceLastCircle += 1/60;
+            if (timeSinceLastCircle > 120 && !trafficCircleActive) {
+                trafficCircleActive = true;
+                trafficCircleY = -200;
+                timeSinceLastCircle = 0;
+            }
+
+            if (trafficCircleActive) {
+                trafficCircleY += 2 * speedMultiplier;
+                if (trafficCircleY > canvas.height) {
+                    trafficCircleActive = false;
+                }
+            }
+
+            timeSinceLastCrossing += 1/60;
+            if (timeSinceLastCrossing > 30 && !crossingGolfCart) {
+                spawnCrossingGolfCart();
+                timeSinceLastCrossing = 0;
+            }
+
+            timeSinceLastSign += 1/60;
+            if (timeSinceLastSign > 60) {
+                spawnCampaignSign();
+                timeSinceLastSign = 0;
+            }
+
+            timeSinceLastSchoolCrossing += 1/60;
+            if (timeSinceLastSchoolCrossing > 60) {
+                spawnSchoolCrossing();
+                timeSinceLastSchoolCrossing = 0;
+            }
+
+            if (Math.random() < 0.005) spawnRoadKill();
+
+            if (Math.random() < trafficRate) spawnObstacle();
+
+            if (crossingGolfCart) {
+                crossingGolfCart.x += crossingGolfCart.speed;
+                if (checkCollision(player, crossingGolfCart)) {
+                    score -= 2;
+                    hitCount += 1;
+                    hitCounter.textContent = `Hits: ${hitCount}`;
+                    crashSound.play().catch(err => console.log("Crash failed:", err));
+                    crossingGolfCart = null;
+                    if (hitCount >= maxHits) endGame();
+                } else if (crossingGolfCart.x > canvas.width && !crossingGolfCart.passed) {
+                    score += 1;
+                    pointSound.play().catch(err => console.log("Point failed:", err));
+                    crossingGolfCart.passed = true;
+                    if (score >= winScore) endGame(true);
+                }
+            }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].y += obstacles[i].speed;
+
+                if (obstacles[i].type === 'dog' && !obstacles[i].barked && obstacles[i].y > player.y - 100) {
+                    dogBark.play().catch(err => console.log("Dog bark failed:", err));
+                    obstacles[i].barked = true;
+                }
+
+                if (checkCollision(player, obstacles[i])) {
+                    score -= 2;
+                    hitCount += 1;
+                    hitCounter.textContent = `Hits: ${hitCount}`;
+                    crashSound.play().catch(err => console.log("Crash failed:", err));
+                    obstacles.splice(i, 1);
+                    if (hitCount >= maxHits) endGame();
+                    continue;
+                }
+
+                if (obstacles[i].type === 'police' && obstacles[i].y > player.y + player.height && !obstacles[i].passed) {
+                    if (!obstacles[i].soundPlayed) {
+                        sirenSound.volume = Math.max(0, sirenSound.volume - 0.1);
+                        obstacles[i].soundPlayed = true;
+                    }
+                }
+
+                if (!obstacles[i].passed && obstacles[i].y > player.y + player.height) {
+                    score += 1;
+                    pointSound.play().catch(err => console.log("Point failed:", err));
+                    obstacles[i].passed = true;
+                    if (score >= winScore) endGame(true);
+                }
+
+                if (obstacles[i].y > canvas.height) {
+                    obstacles.splice(i, 1);
+                }
+            }
+
+            for (let i = campaignSigns.length - 1; i >= 0; i--) {
+                campaignSigns[i].y += campaignSigns[i].speed;
+                if (campaignSigns[i].y > canvas.height) {
+                    campaignSigns.splice(i, 1);
+                }
+            }
+
+            for (let i = schoolCrossings.length - 1; i >= 0; i--) {
+                schoolCrossings[i].y += schoolCrossings[i].speed;
+                if (schoolCrossings[i].y > canvas.height) {
+                    schoolCrossings.splice(i, 1);
+                }
+            }
+
+            for (let i = roadKill.length - 1; i >= 0; i--) {
+                roadKill[i].y += roadKill[i].speed;
+                if (roadKill[i].y > canvas.height) {
+                    roadKill.splice(i, 1);
+                }
+            }
+
+            scoreDisplay.textContent = `Score: ${score}`;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#00FF00';
+            ctx.fillRect(0, 0, 50, canvas.height);
+            ctx.fillRect(canvas.width - 50, 0, 50, canvas.height);
+
+            for (let y = roadOffset; y < canvas.height; y += 100) {
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(20, y, 10, 20);
+                ctx.fillRect(canvas.width - 30, y, 10, 20);
+                ctx.fillStyle = '#006400';
+                ctx.beginPath();
+                ctx.arc(25, y - 10, 15, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(canvas.width - 25, y - 10, 15, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.fillStyle = '#666666';
+            ctx.fillRect(50, 0, canvas.width - 100, canvas.height);
+            ctx.fillStyle = '#FFFF00';
+            for (let y = roadOffset; y < canvas.height; y += 40) {
+                ctx.fillRect(canvas.width/2 - 6, y, 4, 20);
+                ctx.fillRect(canvas.width/2 + 2, y, 4, 20);
+            }
+            ctx.fillStyle = '#FFFFFF';
+            for (let y = roadOffset; y < canvas.height; y += 40) {
+                ctx.fillRect(50, y, 4, 20);
+                ctx.fillRect(canvas.width - 54, y, 4, 20);
+            }
+
+            if (trafficCircleActive) {
+                ctx.fillStyle = '#666666';
+                ctx.beginPath();
+                ctx.arc(canvas.width/2, trafficCircleY, 100, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#87CEEB';
+                ctx.beginPath();
+                ctx.arc(canvas.width/2, trafficCircleY, 70, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            schoolCrossings.forEach(crossing => {
+                ctx.fillStyle = '#FFFFFF';
+                for (let x = 50; x < canvas.width - 50; x += 20) {
+                    ctx.fillRect(x, crossing.y, 10, 20);
+                }
+            });
+
+            roadKill.forEach(kill => {
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(kill.x, kill.y, kill.width, kill.height);
+            });
+
+            campaignSigns.forEach(sign => {
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(sign.x, sign.y, sign.width, sign.height);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '12px Arial';
+                ctx.fillText('Nikki', sign.x + 5, sign.y + 25);
+            });
+
+            drawVehicle(player.x, player.y, player.width, player.height, '#000000', 'car');
+
+            obstacles.forEach(obstacle => {
+                drawVehicle(obstacle.x, obstacle.y, obstacle.width, obstacle.height, obstacle.color, obstacle.type);
+            });
+
+            if (crossingGolfCart) {
+                drawVehicle(crossingGolfCart.x, crossingGolfCart.y, crossingGolfCart.width, crossingGolfCart.height, crossingGolfCart.color, crossingGolfCart.type);
+            }
+
+            bullets.forEach(bullet => {
+                ctx.fillStyle = bullet.color;
+                ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            });
+
+            // Draw explosions
+            explosions.forEach(explosion => {
+                ctx.beginPath();
+                ctx.arc(explosion.x, explosion.y, explosion.radius, 0, Math.PI * 2);
+                ctx.fillStyle = explosion.color;
+                ctx.globalAlpha = 1 - (explosion.time / explosion.duration); // Fade out
+                ctx.fill();
+                ctx.globalAlpha = 1; // Reset alpha
+            });
+        }
+
+        function drawVehicle(x, y, width, height, color, type) {
+            ctx.fillStyle = color;
+            if (type === 'jogger') {
+                ctx.beginPath();
+                ctx.arc(x + width/2, y + 10, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillRect(x + width/4, y + 18, width/2, height/2);
+                ctx.fillRect(x, y + 20, width/4, height/2);
+                ctx.fillRect(x + width*3/4, y + 20, width/4, height/2);
+                ctx.fillRect(x + width/4, y + height/2 + 10, width/4, height/2 - 10);
+                ctx.fillRect(x + width/2, y + height/2 + 10, width/4, height/2 - 10);
+            } else if (type === 'deer') {
+                ctx.fillRect(x + width/4, y + height/4, width/2, height/2);
+                ctx.beginPath();
+                ctx.arc(x + width/2, y + 10, 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillRect(x + width/2 - 5, y - 5, 2, 10);
+                ctx.fillRect(x + width/2 + 3, y - 5, 2, 10);
+                ctx.fillRect(x + width/4, y + height/2, width/4, height/2);
+                ctx.fillRect(x + width/2, y + height/2, width/4, height/2);
+            } else if (type === 'dog') {
+                ctx.fillRect(x + width/4, y + height/4, width/2, height/2);
+                ctx.beginPath();
+                ctx.arc(x + width/2, y + 10, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillRect(x + width/4, y, width/4, 5);
+                ctx.fillRect(x + width/2, y, width/4, 5);
+                ctx.fillRect(x + width/4, y + height/2, width/4, height/2);
+                ctx.fillRect(x + width/2, y + height/2, width/4, height/2);
+            } else if (type === 'schoolbus') {
+                ctx.fillRect(x, y, width, height);
+                ctx.fillStyle = '#000000';
+                for (let i = 0; i < 4; i++) {
+                    ctx.fillRect(x + width * 0.1 + i * width * 0.2, y + height * 0.2, width * 0.15, height * 0.3);
+                }
+                ctx.fillRect(x + width * 0.1, y - 5, width * 0.2, 10);
+                ctx.fillRect(x + width * 0.7, y - 5, width * 0.2, 10);
+                ctx.fillRect(x + width * 0.1, y + height - 5, width * 0.2, 10);
+                ctx.fillRect(x + width * 0.7, y + height - 5, width * 0.2, 10);
+                ctx.fillStyle = lightFlash ? '#FF0000' : '#800000';
+                ctx.fillRect(x + width * 0.1, y - 10, 5, 5);
+                ctx.fillRect(x + width * 0.9 - 5, y - 10, 5, 5);
+                ctx.fillRect(x + width * 0.1, y + height, 5, 5);
+                ctx.fillRect(x + width * 0.9 - 5, y + height, 5, 5);
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(x + width, y + height * 0.1, 10, 20);
+                ctx.fillStyle = '#FFFF00';
+                ctx.fillRect(x + width + 2, y + height * 0.1 + 2, 6, 16);
+                ctx.fillStyle = '#FF0000';
+                ctx.beginPath();
+                ctx.moveTo(x + width + 5, y + height * 0.4);
+                ctx.lineTo(x + width + 25, y + height * 0.4);
+                ctx.lineTo(x + width + 25, y + height * 0.6);
+                ctx.lineTo(x + width + 5, y + height * 0.6);
+                ctx.fill();
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '10px Arial';
+                ctx.fillText('STOP', x + width + 7, y + height * 0.5 + 3);
+            } else if (type === 'police') {
+                ctx.fillRect(x, y, width, height);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(x + width * 0.2, y + height * 0.2, width * 0.6, height * 0.3);
+                ctx.fillStyle = lightFlash ? '#FF0000' : '#0000FF';
+                ctx.fillRect(x + width * 0.1, y - 5, width * 0.2, 5);
+                ctx.fillRect(x + width * 0.7, y - 5, width * 0.2, 5);
+                ctx.fillRect(x + width * 0.1, y + height, width * 0.2, 5);
+                ctx.fillRect(x + width * 0.7, y + height, width * 0.2, 5);
+            } else {
+                ctx.fillRect(x, y, width, height);
+                ctx.fillStyle = '#000000';
+                if (type === 'car' || type === 'golfcart') {
+                    ctx.fillRect(x + width * 0.2, y + height * 0.2, width * 0.6, height * 0.3);
+                    ctx.fillRect(x + width * 0.1, y - 5, width * 0.2, 10);
+                    ctx.fillRect(x + width * 0.7, y - 5, width * 0.2, 10);
+                    ctx.fillRect(x + width * 0.1, y + height - 5, width * 0.2, 10);
+                    ctx.fillRect(x + width * 0.7, y + height - 5, width * 0.2, 10);
+                } else if (type === 'ebike' || type === 'biker') {
+                    ctx.fillRect(x + width * 0.25, y - 5, width * 0.5, 10);
+                    ctx.fillRect(x + width * 0.25, y + height - 5, width * 0.5, 10);
+                }
+            }
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
