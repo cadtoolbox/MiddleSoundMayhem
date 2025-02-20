@@ -2,10 +2,8 @@
 <html>
 <head>
     <title>Middle Sound Mayhem</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        canvas {
-            border: 1px solid black;
-        }
         body {
             display: flex;
             justify-content: center;
@@ -14,30 +12,55 @@
             margin: 0;
             font-family: Arial, sans-serif;
             background: #87CEEB;
+            overflow: hidden;
         }
         #gameContainer {
             text-align: center;
             position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        canvas {
+            border: 1px solid black;
+            width: 100%;
+            height: 100%;
+            max-width: 400px; /* Default max size */
+            max-height: 600px;
+            touch-action: none; /* Prevent default touch actions */
         }
         #scoreContainer {
             display: flex;
             justify-content: center;
             align-items: center;
             margin: 10px 0;
+            position: absolute;
+            top: 0;
+            width: 100%;
+            z-index: 10;
         }
         #score {
             font-size: 24px;
             margin: 0 10px 0 0;
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px;
         }
         #hitCounter {
             font-size: 24px;
             margin: 0 0 0 10px;
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px;
         }
         #gameTitle {
             font-size: 36px;
             font-weight: bold;
             color: #333;
             margin-bottom: 5px;
+            position: absolute;
+            top: 40px;
+            width: 100%;
+            z-index: 10;
         }
         #speedometer {
             font-size: 18px;
@@ -45,43 +68,52 @@
             background: rgba(0, 0, 0, 0.7);
             padding: 5px 10px;
             border-radius: 5px;
-            display: inline-block;
-            margin-bottom: 10px;
+            position: absolute;
+            top: 80px;
+            width: 100%;
+            z-index: 10;
         }
         #crossingAlert {
             font-size: 24px;
             color: white;
             position: absolute;
-            width: 400px;
+            width: 100%;
             text-align: center;
             top: 20%;
             left: 50%;
             transform: translateX(-50%);
             display: none;
             text-shadow: 2px 2px 4px #000;
+            z-index: 10;
         }
         #countdown {
             font-size: 48px;
             color: white;
             position: absolute;
-            width: 400px;
+            width: 100%;
             text-align: center;
             top: 50%;
             transform: translateY(-50%);
             display: none;
+            z-index: 10;
         }
         #gameOver {
             font-size: 48px;
             position: absolute;
-            width: 400px;
+            width: 100%;
             text-align: center;
             top: 50%;
             transform: translateY(-50%);
             display: none;
             text-shadow: 2px 2px 4px #000;
+            z-index: 10;
         }
         #controls {
             margin-top: 10px;
+            position: absolute;
+            bottom: 10px;
+            width: 100%;
+            z-index: 10;
         }
         button {
             padding: 5px 10px;
@@ -114,7 +146,7 @@
             <div id="score">Score: 0</div>
             <div id="hitCounter">Hits: 0</div>
         </div>
-        <canvas id="gameCanvas" width="400" height="600"></canvas>
+        <canvas id="gameCanvas"></canvas>
         <div id="crossingAlert">Golf Cart Crossing!</div>
         <div id="countdown"></div>
         <div id="gameOver"></div>
@@ -171,11 +203,30 @@
         const destroySound = new Audio('https://www.myinstants.com/media/sounds/roblox-death-sound-oof-sound-effect.mp3');
         destroySound.volume = 0.5;
 
+        // Scale canvas to screen size
+        function resizeCanvas() {
+            const maxWidth = 400;
+            const maxHeight = 600;
+            const aspectRatio = maxWidth / maxHeight;
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight - 100; // Account for controls
+
+            if (windowWidth / windowHeight > aspectRatio) {
+                canvas.height = Math.min(windowHeight, maxHeight);
+                canvas.width = canvas.height * aspectRatio;
+            } else {
+                canvas.width = Math.min(windowWidth, maxWidth);
+                canvas.height = canvas.width / aspectRatio;
+            }
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
         let score = 0;
         let hitCount = 0;
-        let schoolBusCount = 0; // Track school bus spawns
+        let schoolBusCount = 0;
         const maxHits = 25;
-        const winScore = 500;
+        const winScore = 100;
         const player = {
             x: canvas.width / 2 - 20,
             y: canvas.height - 80,
@@ -186,7 +237,7 @@
 
         const obstacles = [];
         const bullets = [];
-        const explosions = []; // Array for explosion effects
+        const explosions = [];
         const obstacleTypes = [
             {type: 'car', width: 40, height: 60, color: '#FF0000', details: true},
             {type: 'ebike', width: 20, height: 40, color: '#0000FF', details: true},
@@ -200,6 +251,9 @@
         ];
 
         let keys = {};
+        let touchX = null;
+        let lastTapTime = 0;
+        const doubleTapThreshold = 300; // Milliseconds for double tap
         let roadOffset = 0;
         let trafficCircleActive = false;
         let trafficCircleY = -600;
@@ -222,6 +276,7 @@
             introMusic.play().catch(err => console.log("Intro music on load failed:", err));
         });
 
+        // Keyboard controls (for desktop)
         document.addEventListener('keydown', (e) => {
             if (gameRunning) {
                 e.preventDefault();
@@ -235,6 +290,37 @@
             }
         });
         document.addEventListener('keyup', (e) => keys[e.key] = false);
+
+        // Touch controls (for mobile)
+        canvas.addEventListener('touchstart', (e) => {
+            if (gameRunning) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                touchX = touch.clientX / window.innerWidth * canvas.width; // Scale to canvas
+
+                const currentTime = Date.now();
+                if (currentTime - lastTapTime < doubleTapThreshold) {
+                    shootSound.play().catch(err => console.log("Shoot sound failed:", err));
+                    spawnBullet();
+                }
+                lastTapTime = currentTime;
+            }
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (gameRunning) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                touchX = touch.clientX / window.innerWidth * canvas.width;
+            }
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            if (gameRunning) {
+                e.preventDefault();
+                touchX = null;
+            }
+        });
 
         startBtn.addEventListener('click', startGame);
         increaseTrafficBtn.addEventListener('click', () => trafficRate = Math.min(0.1, trafficRate + 0.01));
@@ -260,9 +346,9 @@
                 y: y,
                 radius: 10,
                 maxRadius: 30,
-                duration: 0.5, // Seconds
+                duration: 0.5,
                 time: 0,
-                color: '#FF4500' // Orange-red explosion
+                color: '#FF4500'
             };
             explosions.push(explosion);
             destroySound.play().catch(err => console.log("Destroy sound failed:", err));
@@ -429,8 +515,18 @@
         function update() {
             if (!gameRunning) return;
 
+            // Keyboard steering (desktop)
             if (keys['ArrowLeft'] && player.x > 50) player.x -= player.speed;
             if (keys['ArrowRight'] && player.x < canvas.width - 50 - player.width) player.x += player.speed;
+
+            // Touch steering (mobile)
+            if (touchX !== null) {
+                const targetX = touchX - player.width / 2;
+                if (targetX > 50 && targetX < canvas.width - 50 - player.width) {
+                    if (targetX < player.x) player.x -= Math.min(player.speed, player.x - targetX);
+                    if (targetX > player.x) player.x += Math.min(player.speed, targetX - player.x);
+                }
+            }
 
             roadOffset += 2 * speedMultiplier;
             if (roadOffset > 40) roadOffset = 0;
@@ -443,7 +539,6 @@
                 flashTimer = 0;
             }
 
-            // Update bullets and check collisions
             const bulletsToRemove = [];
             const obstaclesToRemove = [];
 
@@ -468,9 +563,8 @@
             bulletsToRemove.sort((a, b) => b - a).forEach(index => bullets.splice(index, 1));
             obstaclesToRemove.sort((a, b) => b - a).forEach(index => obstacles.splice(index, 1));
 
-            // Update explosions
             for (let i = explosions.length - 1; i >= 0; i--) {
-                explosions[i].time += 1/60; // Assuming 60 FPS
+                explosions[i].time += 1/60;
                 explosions[i].radius += (explosions[i].maxRadius - 10) / (explosions[i].duration * 60);
                 if (explosions[i].time >= explosions[i].duration) {
                     explosions.splice(i, 1);
@@ -670,14 +764,13 @@
                 ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
             });
 
-            // Draw explosions
             explosions.forEach(explosion => {
                 ctx.beginPath();
                 ctx.arc(explosion.x, explosion.y, explosion.radius, 0, Math.PI * 2);
                 ctx.fillStyle = explosion.color;
-                ctx.globalAlpha = 1 - (explosion.time / explosion.duration); // Fade out
+                ctx.globalAlpha = 1 - (explosion.time / explosion.duration);
                 ctx.fill();
-                ctx.globalAlpha = 1; // Reset alpha
+                ctx.globalAlpha = 1;
             });
         }
 
