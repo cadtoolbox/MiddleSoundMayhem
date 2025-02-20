@@ -155,10 +155,16 @@
             height: 60px;
             line-height: 60px;
         }
-        #trafficControls, #speedControls {
+        #trafficControls, #speedControls, #modeControls {
             display: flex;
             flex-direction: column;
             gap: 5px;
+        }
+        #modeToggle {
+            background-color: #2196F3; /* Blue for Easy mode */
+        }
+        #modeToggle.active {
+            background-color: #F44336; /* Red for Hard mode */
         }
         .flash {
             animation: flash 0.5s infinite;
@@ -217,6 +223,9 @@
                 <button id="increaseTraffic">+ Traffic</button>
                 <button id="decreaseTraffic">- Traffic</button>
             </div>
+            <div id="modeControls">
+                <button id="modeToggle">Easy Mode</button>
+            </div>
             <div id="speedControls">
                 <button id="increaseSpeed">+ Speed</button>
                 <button id="decreaseSpeed">- Speed</button>
@@ -243,6 +252,7 @@
         const decreaseTrafficBtn = document.getElementById('decreaseTraffic');
         const increaseSpeedBtn = document.getElementById('increaseSpeed');
         const decreaseSpeedBtn = document.getElementById('decreaseSpeed');
+        const modeToggleBtn = document.getElementById('modeToggle');
 
         let audioInitialized = false;
         const tireNoise = new Audio('https://www.myinstants.com/media/sounds/long-brain-fart.mp3');
@@ -298,7 +308,7 @@
         let hitCount = 0;
         let schoolBusCount = 0;
         const maxHits = 25;
-        const winScore = 100;
+        let winScore = 100; // Default to Easy mode
         const player = {
             x: canvas.width / 2 - 20,
             y: canvas.height - 80,
@@ -336,7 +346,7 @@
         let gameRunning = false;
         let gamePaused = false;
         let countdown = 0;
-        let trafficRate = 0.01;
+        let trafficRate = 0.02; // Starting traffic increased by +1 (from 0.01 to 0.02)
         let speedMultiplier = 0.5;
         let timeSinceLastSign = 0;
         let timeSinceLastSchoolCrossing = 0;
@@ -348,6 +358,7 @@
         let touchStartTime = 0;
         let lastSpeedIncreaseScore = 0;
         let lastTrafficIncreaseScore = 0;
+        let isHardMode = false;
 
         window.addEventListener('load', () => playSound(introMusic));
 
@@ -430,6 +441,12 @@
         decreaseSpeedBtn.addEventListener('click', () => {
             player.baseSpeedMultiplier = Math.max(0.5, player.baseSpeedMultiplier - 0.2);
             if (!player.braking || isMobile) speedMultiplier = player.baseSpeedMultiplier;
+        });
+        modeToggleBtn.addEventListener('click', () => {
+            isHardMode = !isHardMode;
+            winScore = isHardMode ? 200 : 100;
+            modeToggleBtn.textContent = isHardMode ? 'Hard Mode' : 'Easy Mode';
+            modeToggleBtn.classList.toggle('active', isHardMode);
         });
 
         function spawnBullet() {
@@ -557,11 +574,11 @@
             timeSinceLastCrossing = 0;
             timeSinceLastSign = 0;
             timeSinceLastSchoolCrossing = 0;
-            trafficRate = 0.01;
+            trafficRate = 0.02; // Starting traffic increased by +1
             lastSpeedIncreaseScore = 0;
             lastTrafficIncreaseScore = 0;
-            roadOffset = 0; // Reset roadOffset
-            scoreDisplay.textContent = `Score: ${score}`;
+            roadOffset = 0;
+            scoreDisplay.textContent = `Score: ${score.toFixed(2)}`;
             hitCounter.textContent = `Hits: ${hitCount}`;
             gameOverDisplay.style.display = 'none';
             gameOverDisplay.classList.remove('winFlash');
@@ -627,14 +644,14 @@
         function updateDifficulty() {
             const speedMilestone = Math.floor(score / 10) * 10;
             if (speedMilestone > lastSpeedIncreaseScore) {
-                player.baseSpeedMultiplier += 0.1;
+                player.baseSpeedMultiplier += 0.1; // +5 on speedometer (0.1 * 50 = 5)
                 lastSpeedIncreaseScore = speedMilestone;
                 if (!player.braking || isMobile) speedMultiplier = player.baseSpeedMultiplier;
             }
 
             const trafficMilestone = Math.floor(score / 15) * 15;
             if (trafficMilestone > lastTrafficIncreaseScore) {
-                trafficRate = Math.min(0.1, trafficRate + 0.01);
+                trafficRate = Math.min(0.1, trafficRate + 0.01); // +1 on traffic scale
                 lastTrafficIncreaseScore = trafficMilestone;
             }
         }
@@ -647,8 +664,8 @@
                 if (keys['ArrowRight'] && player.x < canvas.width - 50 - player.width) player.x += player.speed;
             }
 
-            roadOffset -= 2 * speedMultiplier; // Changed to decrease for forward motion
-            if (roadOffset < -40) roadOffset = 0; // Adjusted reset condition
+            roadOffset -= 2 * speedMultiplier;
+            if (roadOffset < -40) roadOffset = 0;
 
             speedometer.textContent = `${Math.round(speedMultiplier * 50)}`;
 
@@ -668,7 +685,7 @@
                     if (checkCollision(bullets[i], obstacles[j])) {
                         spawnExplosion(obstacles[j].x + obstacles[j].width / 2, obstacles[j].y + obstacles[j].height / 2);
                         score += 2;
-                        scoreDisplay.textContent = `Score: ${score}`;
+                        scoreDisplay.textContent = `Score: ${score.toFixed(2)}`;
                         bulletsToRemove.push(i);
                         obstaclesToRemove.push(j);
                         if (score >= winScore) endGame(true);
@@ -708,9 +725,10 @@
                 }
 
                 if (!obstacles[i].passed && obstacles[i].y > player.y + player.height) {
-                    score += 1;
+                    score += 0.25;
                     playSound(pointSound);
                     obstacles[i].passed = true;
+                    scoreDisplay.textContent = `Score: ${score.toFixed(2)}`;
                     if (score >= winScore) endGame(true);
                 }
 
@@ -773,14 +791,13 @@
                     crossingGolfCart = null;
                     if (hitCount >= maxHits) endGame(false);
                 } else if (crossingGolfCart.x > canvas.width && !crossingGolfCart.passed) {
-                    score += 1;
+                    score += 0.25;
                     playSound(pointSound);
                     crossingGolfCart.passed = true;
+                    scoreDisplay.textContent = `Score: ${score.toFixed(2)}`;
                     if (score >= winScore) endGame(true);
                 }
             }
-
-            scoreDisplay.textContent = `Score: ${score}`;
         }
 
         function drawHUD() {
@@ -798,15 +815,13 @@
             ctx.fillRect(canvas.width - 50, 0, 50, canvas.height);
 
             let treeCounter = 0;
-            for (let y = roadOffset; y < canvas.height + 100; y += 100) { // Extended range to cover top
+            for (let y = roadOffset; y < canvas.height + 100; y += 100) {
                 ctx.fillStyle = '#8B4513';
                 ctx.fillRect(20, y, 10, 20);
                 ctx.fillRect(canvas.width - 30, y, 10, 20);
                 ctx.fillStyle = '#006400';
-                
                 const isPineLeft = (treeCounter % 2 === 0);
                 const isPineRight = (treeCounter % 2 === 1);
-                
                 if (isPineLeft) {
                     ctx.beginPath();
                     ctx.moveTo(25, y - 25);
@@ -818,7 +833,6 @@
                     ctx.arc(25, y - 10, 15, 0, Math.PI * 2);
                     ctx.fill();
                 }
-                
                 if (isPineRight) {
                     ctx.beginPath();
                     ctx.moveTo(canvas.width - 25, y - 25);
@@ -836,12 +850,12 @@
             ctx.fillStyle = '#666666';
             ctx.fillRect(50, 0, canvas.width - 100, canvas.height);
             ctx.fillStyle = '#FFFF00';
-            for (let y = roadOffset; y < canvas.height + 40; y += 40) { // Extended range
+            for (let y = roadOffset; y < canvas.height + 40; y += 40) {
                 ctx.fillRect(canvas.width/2 - 6, y, 4, 20);
                 ctx.fillRect(canvas.width/2 + 2, y, 4, 20);
             }
             ctx.fillStyle = '#FFFFFF';
-            for (let y = roadOffset; y < canvas.height + 40; y += 40) { // Extended range
+            for (let y = roadOffset; y < canvas.height + 40; y += 40) {
                 ctx.fillRect(50, y, 4, 20);
                 ctx.fillRect(canvas.width - 54, y, 4, 20);
             }
