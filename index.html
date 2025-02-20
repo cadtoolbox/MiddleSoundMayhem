@@ -20,13 +20,16 @@
             width: 100%;
             height: 100%;
             max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
         canvas {
             border: 1px solid black;
             width: 100%;
             max-width: 400px;
-            height: calc(100% - 200px);
-            max-height: 600px;
+            height: calc(100% - 300px); /* Reduced height to ensure controls are visible */
+            max-height: 500px; /* Adjusted max-height */
             display: block;
             margin-top: 120px;
         }
@@ -116,25 +119,19 @@
             z-index: 10;
         }
         #controls {
-            position: absolute;
-            bottom: 10px;
+            position: relative; /* Changed from absolute to relative */
             width: 100%;
-            height: 80px;
+            height: 100px; /* Increased height for better visibility */
             display: flex;
             justify-content: space-between;
             align-items: center;
             z-index: 10;
-            padding: 0 10px;
+            padding: 10px;
             box-sizing: border-box;
+            background: rgba(0, 0, 0, 0.5); /* Added background for visibility */
         }
         #mobileControls {
-            position: absolute;
-            bottom: 10px;
-            width: 100%;
-            display: none;
-            z-index: 10;
-            padding: 0 10px;
-            box-sizing: border-box;
+            display: none; /* Keep hidden since we're using touch controls */
         }
         button {
             padding: 0;
@@ -149,6 +146,7 @@
             height: 30px;
             line-height: 30px;
             text-align: center;
+            touch-action: manipulation; /* Improve touch responsiveness */
         }
         button:active {
             background-color: #45a049;
@@ -179,11 +177,22 @@
             100% { color: white; }
         }
         @media only screen and (max-width: 768px) {
-            #mobileControls {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                height: 80px;
+            canvas {
+                margin-top: 100px; /* Slightly reduced on mobile */
+                height: calc(100% - 250px); /* Ensure space for controls */
+            }
+            #controls {
+                height: 120px; /* Increased height for mobile */
+                padding: 5px;
+            }
+            #header {
+                height: 80px; /* Reduced header height on mobile */
+            }
+            #gameTitle {
+                font-size: 24px; /* Slightly smaller title */
+            }
+            #scoreContainer {
+                gap: 15px; /* Reduced gap for mobile */
             }
         }
     </style>
@@ -269,10 +278,10 @@
 
         function resizeCanvas() {
             const maxWidth = 400;
-            const maxHeight = 600;
+            const maxHeight = 500; // Reduced max height
             const aspectRatio = maxWidth / maxHeight;
             const windowWidth = window.innerWidth;
-            const windowHeight = window.innerHeight - 200;
+            const windowHeight = window.innerHeight - 250; // Account for header and controls
 
             if (windowWidth / windowHeight > aspectRatio) {
                 canvas.height = Math.min(windowHeight, maxHeight);
@@ -297,7 +306,7 @@
             height: 60,
             speed: 5,
             braking: false,
-            baseSpeedMultiplier: 0.5 // Base speed for Speed 25
+            baseSpeedMultiplier: 0.5
         };
 
         const obstacles = [];
@@ -328,7 +337,7 @@
         let gamePaused = false;
         let countdown = 0;
         let trafficRate = 0.01;
-        let speedMultiplier = 0.5; // Starts at Speed 25
+        let speedMultiplier = 0.5;
         let timeSinceLastSign = 0;
         let timeSinceLastSchoolCrossing = 0;
         let schoolCrossings = [];
@@ -337,8 +346,8 @@
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         let lastTime = 0;
         let touchStartTime = 0;
-        let lastSpeedIncreaseScore = 0; // Track last score milestone for speed
-        let lastTrafficIncreaseScore = 0; // Track last score milestone for traffic
+        let lastSpeedIncreaseScore = 0;
+        let lastTrafficIncreaseScore = 0;
 
         window.addEventListener('load', () => playSound(introMusic));
 
@@ -621,18 +630,16 @@
         }
 
         function updateDifficulty() {
-            // Increase speed by 5 (0.1 multiplier) every 10 points
             const speedMilestone = Math.floor(score / 10) * 10;
             if (speedMilestone > lastSpeedIncreaseScore) {
-                player.baseSpeedMultiplier += 0.1; // +5 speed (0.1 * 50)
+                player.baseSpeedMultiplier += 0.1;
                 lastSpeedIncreaseScore = speedMilestone;
                 if (!player.braking) speedMultiplier = player.baseSpeedMultiplier;
             }
 
-            // Increase traffic by 0.01 every 15 points
             const trafficMilestone = Math.floor(score / 15) * 15;
             if (trafficMilestone > lastTrafficIncreaseScore) {
-                trafficRate = Math.min(0.1, trafficRate + 0.01); // +1 traffic rate
+                trafficRate = Math.min(0.1, trafficRate + 0.01);
                 lastTrafficIncreaseScore = trafficMilestone;
             }
         }
