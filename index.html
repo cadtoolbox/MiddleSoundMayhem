@@ -22,16 +22,16 @@
             max-width: 400px;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            justify-content: flex-start; /* Changed to flex-start to minimize space */
         }
         canvas {
             border: 1px solid black;
             width: 100%;
             max-width: 400px;
-            height: calc(100% - 300px); /* Reduced height to ensure controls are visible */
-            max-height: 500px; /* Adjusted max-height */
+            height: calc(100% - 220px); /* Adjusted to fit header and controls */
+            max-height: 500px;
             display: block;
-            margin-top: 120px;
+            margin-top: 110px; /* Adjusted to fit header */
         }
         #header {
             position: absolute;
@@ -119,19 +119,19 @@
             z-index: 10;
         }
         #controls {
-            position: relative; /* Changed from absolute to relative */
+            position: relative;
             width: 100%;
-            height: 100px; /* Increased height for better visibility */
+            height: 100px; /* Fixed height for controls */
             display: flex;
             justify-content: space-between;
             align-items: center;
             z-index: 10;
             padding: 10px;
             box-sizing: border-box;
-            background: rgba(0, 0, 0, 0.5); /* Added background for visibility */
+            background: rgba(0, 0, 0, 0.5);
         }
         #mobileControls {
-            display: none; /* Keep hidden since we're using touch controls */
+            display: none;
         }
         button {
             padding: 0;
@@ -146,7 +146,7 @@
             height: 30px;
             line-height: 30px;
             text-align: center;
-            touch-action: manipulation; /* Improve touch responsiveness */
+            touch-action: manipulation;
         }
         button:active {
             background-color: #45a049;
@@ -178,21 +178,21 @@
         }
         @media only screen and (max-width: 768px) {
             canvas {
-                margin-top: 100px; /* Slightly reduced on mobile */
-                height: calc(100% - 250px); /* Ensure space for controls */
+                margin-top: 100px;
+                height: calc(100% - 200px); /* Slightly less space for mobile */
             }
             #controls {
-                height: 120px; /* Increased height for mobile */
+                height: 90px; /* Reduced for mobile */
                 padding: 5px;
             }
             #header {
-                height: 80px; /* Reduced header height on mobile */
+                height: 100px; /* Keep header consistent */
             }
             #gameTitle {
-                font-size: 24px; /* Slightly smaller title */
+                font-size: 28px; /* Keep header formatting */
             }
             #scoreContainer {
-                gap: 15px; /* Reduced gap for mobile */
+                gap: 15px;
             }
         }
     </style>
@@ -278,10 +278,10 @@
 
         function resizeCanvas() {
             const maxWidth = 400;
-            const maxHeight = 500; // Reduced max height
+            const maxHeight = 500;
             const aspectRatio = maxWidth / maxHeight;
             const windowWidth = window.innerWidth;
-            const windowHeight = window.innerHeight - 250; // Account for header and controls
+            const windowHeight = window.innerHeight - 210; // Adjusted for header (100px) and controls (100px mobile 90px)
 
             if (windowWidth / windowHeight > aspectRatio) {
                 canvas.height = Math.min(windowHeight, maxHeight);
@@ -412,19 +412,14 @@
                 player.x += deltaX * 0.1;
                 player.x = Math.max(50, Math.min(canvas.width - 50 - player.width, player.x));
                 touchStartX = touchX;
-                const touchDuration = new Date().getTime() - touchStartTime;
-                if (touchDuration > 500) {
-                    player.braking = true;
-                    speedMultiplier = Math.max(0.2, player.baseSpeedMultiplier - 0.2);
-                }
+                // Braking disabled on mobile
                 if (!tireNoise.paused) return;
                 playSound(tireNoise);
             });
 
             canvas.addEventListener('touchend', (e) => {
                 e.preventDefault();
-                player.braking = false;
-                speedMultiplier = player.baseSpeedMultiplier;
+                // Braking disabled on mobile, no speed change
             });
         }
 
@@ -433,11 +428,11 @@
         decreaseTrafficBtn.addEventListener('click', () => trafficRate = Math.max(0.01, trafficRate - 0.01));
         increaseSpeedBtn.addEventListener('click', () => {
             player.baseSpeedMultiplier = Math.min(2, player.baseSpeedMultiplier + 0.2);
-            if (!player.braking) speedMultiplier = player.baseSpeedMultiplier;
+            if (!player.braking || isMobile) speedMultiplier = player.baseSpeedMultiplier;
         });
         decreaseSpeedBtn.addEventListener('click', () => {
             player.baseSpeedMultiplier = Math.max(0.5, player.baseSpeedMultiplier - 0.2);
-            if (!player.braking) speedMultiplier = player.baseSpeedMultiplier;
+            if (!player.braking || isMobile) speedMultiplier = player.baseSpeedMultiplier;
         });
 
         function spawnBullet() {
@@ -634,7 +629,7 @@
             if (speedMilestone > lastSpeedIncreaseScore) {
                 player.baseSpeedMultiplier += 0.1;
                 lastSpeedIncreaseScore = speedMilestone;
-                if (!player.braking) speedMultiplier = player.baseSpeedMultiplier;
+                if (!player.braking || isMobile) speedMultiplier = player.baseSpeedMultiplier;
             }
 
             const trafficMilestone = Math.floor(score / 15) * 15;
@@ -1013,7 +1008,7 @@
                         ctx.fillText('Soccer', x + width / 2, y + height / 2 - 5);
                         ctx.fillText('Mom', x + width / 2, y + height / 2 + 5);
                         ctx.textAlign = 'left';
-                        if (player.braking) {
+                        if (player.braking && !isMobile) { // Brake lights only on non-mobile
                             ctx.fillStyle = '#FF0000';
                             ctx.fillRect(x + width * 0.1, y + height, width * 0.2, 5);
                             ctx.fillRect(x + width * 0.7, y + height, width * 0.2, 5);
