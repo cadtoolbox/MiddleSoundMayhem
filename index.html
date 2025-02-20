@@ -22,16 +22,16 @@
             max-width: 400px;
             display: flex;
             flex-direction: column;
-            justify-content: flex-start; /* Changed to flex-start to minimize space */
+            justify-content: flex-start;
         }
         canvas {
             border: 1px solid black;
             width: 100%;
             max-width: 400px;
-            height: calc(100% - 220px); /* Adjusted to fit header and controls */
+            height: calc(100% - 220px);
             max-height: 500px;
             display: block;
-            margin-top: 110px; /* Adjusted to fit header */
+            margin-top: 110px;
         }
         #header {
             position: absolute;
@@ -121,7 +121,7 @@
         #controls {
             position: relative;
             width: 100%;
-            height: 100px; /* Fixed height for controls */
+            height: 100px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -179,17 +179,17 @@
         @media only screen and (max-width: 768px) {
             canvas {
                 margin-top: 100px;
-                height: calc(100% - 200px); /* Slightly less space for mobile */
+                height: calc(100% - 200px);
             }
             #controls {
-                height: 90px; /* Reduced for mobile */
+                height: 90px;
                 padding: 5px;
             }
             #header {
-                height: 100px; /* Keep header consistent */
+                height: 100px;
             }
             #gameTitle {
-                font-size: 28px; /* Keep header formatting */
+                font-size: 28px;
             }
             #scoreContainer {
                 gap: 15px;
@@ -281,7 +281,7 @@
             const maxHeight = 500;
             const aspectRatio = maxWidth / maxHeight;
             const windowWidth = window.innerWidth;
-            const windowHeight = window.innerHeight - 210; // Adjusted for header (100px) and controls (100px mobile 90px)
+            const windowHeight = window.innerHeight - 210;
 
             if (windowWidth / windowHeight > aspectRatio) {
                 canvas.height = Math.min(windowHeight, maxHeight);
@@ -388,38 +388,37 @@
         });
 
         if (isMobile) {
-            let touchStartX = 0;
-            let lastTap = 0;
+            let lastTouchX = player.x + player.width / 2; // Initialize to center of SUV
 
             canvas.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                touchStartX = e.touches[0].clientX;
-                touchStartTime = new Date().getTime();
-                const currentTime = touchStartTime;
-                const tapGap = currentTime - lastTap;
+                const touchX = e.touches[0].clientX;
+                lastTouchX = touchX;
+                const currentTime = new Date().getTime();
+                const tapGap = currentTime - touchStartTime;
                 if (tapGap < 300 && gameRunning && !gamePaused) {
                     playSound(shootSound);
                     spawnBullet();
                 }
-                lastTap = currentTime;
+                touchStartTime = currentTime;
+                if (!tireNoise.paused) return;
+                playSound(tireNoise);
             });
 
             canvas.addEventListener('touchmove', (e) => {
                 e.preventDefault();
                 if (!gameRunning || gamePaused) return;
                 const touchX = e.touches[0].clientX;
-                const deltaX = touchX - touchStartX;
-                player.x += deltaX * 0.1;
-                player.x = Math.max(50, Math.min(canvas.width - 50 - player.width, player.x));
-                touchStartX = touchX;
-                // Braking disabled on mobile
-                if (!tireNoise.paused) return;
-                playSound(tireNoise);
+                // Directly set SUV position to follow finger, adjusted for canvas offset
+                const canvasRect = canvas.getBoundingClientRect();
+                const canvasX = touchX - canvasRect.left;
+                player.x = Math.max(50, Math.min(canvas.width - 50 - player.width, canvasX - player.width / 2));
+                lastTouchX = touchX;
             });
 
             canvas.addEventListener('touchend', (e) => {
                 e.preventDefault();
-                // Braking disabled on mobile, no speed change
+                // No braking or position reset on mobile
             });
         }
 
@@ -1008,7 +1007,7 @@
                         ctx.fillText('Soccer', x + width / 2, y + height / 2 - 5);
                         ctx.fillText('Mom', x + width / 2, y + height / 2 + 5);
                         ctx.textAlign = 'left';
-                        if (player.braking && !isMobile) { // Brake lights only on non-mobile
+                        if (player.braking && !isMobile) {
                             ctx.fillStyle = '#FF0000';
                             ctx.fillRect(x + width * 0.1, y + height, width * 0.2, 5);
                             ctx.fillRect(x + width * 0.7, y + height, width * 0.2, 5);
