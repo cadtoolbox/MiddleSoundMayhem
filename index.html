@@ -19,57 +19,66 @@
             position: relative;
             width: 100%;
             height: 100%;
+            max-width: 400px;
         }
         canvas {
             border: 1px solid black;
             width: 100%;
-            height: 100%;
             max-width: 400px;
+            height: calc(100% - 200px);
             max-height: 600px;
-            touch-action: none; /* Prevent default touch actions */
+            display: block;
+            margin-top: 120px;
         }
         #header {
             position: absolute;
             top: 0;
-            left: 0;
             width: 100%;
             z-index: 10;
-            background: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+            background: rgba(0, 0, 0, 0.5);
             padding: 10px 0;
-        }
-        #scoreContainer {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 5px 0;
-        }
-        #score {
-            font-size: 20px;
-            margin: 0 10px 0 0;
-            color: white;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 5px;
-        }
-        #hitCounter {
-            font-size: 20px;
-            margin: 0 0 0 10px;
-            color: white;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 5px;
+            height: 100px;
         }
         #gameTitle {
             font-size: 28px;
             font-weight: bold;
             color: #fff;
             margin: 0;
+            text-align: center;
         }
-        #speedometer {
-            font-size: 16px;
+        #scoreContainer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px 0;
+            gap: 20px;
+        }
+        #score {
+            font-size: 20px;
             color: white;
             background: rgba(0, 0, 0, 0.7);
             padding: 5px 10px;
             border-radius: 5px;
-            margin-top: 5px;
+        }
+        #hitCounter {
+            font-size: 20px;
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        #speedometer {
+            font-size: 18px;
+            font-weight: bold;
+            color: black;
+            background: white;
+            border: 3px solid black;
+            padding: 5px;
+            width: 50px;
+            height: 50px;
+            line-height: 20px;
+            text-align: center;
+            border-radius: 5px;
         }
         #crossingAlert {
             font-size: 24px;
@@ -107,16 +116,51 @@
             z-index: 10;
         }
         #controls {
-            margin-top: 10px;
             position: absolute;
             bottom: 10px;
             width: 100%;
+            height: 80px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             z-index: 10;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+        #mobileControls {
+            position: absolute;
+            bottom: 10px;
+            width: 100%;
+            display: none;
+            z-index: 10;
+            padding: 0 10px;
+            box-sizing: border-box;
         }
         button {
-            padding: 5px 10px;
-            margin: 0 5px;
+            padding: 0;
+            margin: 0;
             font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 80px;
+            height: 30px;
+            line-height: 30px;
+            text-align: center;
+        }
+        button:active {
+            background-color: #45a049;
+        }
+        #startBtn {
+            height: 60px;
+            line-height: 60px;
+        }
+        #trafficControls, #speedControls {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
         }
         .flash {
             animation: flash 0.5s infinite;
@@ -134,15 +178,23 @@
             50% { color: red; }
             100% { color: white; }
         }
+        @media only screen and (max-width: 768px) {
+            #mobileControls {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                height: 80px;
+            }
+        }
     </style>
 </head>
 <body>
     <div id="gameContainer">
         <div id="header">
             <div id="gameTitle">Middle Sound Mayhem</div>
-            <div id="speedometer">Speed: 0</div>
             <div id="scoreContainer">
                 <div id="score">Score: 0</div>
+                <div id="speedometer"><span style="font-size: 12px;">SPEED</span><br><span id="speedValue">0</span></div>
                 <div id="hitCounter">Hits: 0</div>
             </div>
         </div>
@@ -152,10 +204,19 @@
         <div id="gameOver"></div>
         <div id="controls">
             <button id="startBtn">Start</button>
-            <button id="increaseTraffic">+ Traffic</button>
-            <button id="decreaseTraffic">- Traffic</button>
-            <button id="increaseSpeed">+ Speed</button>
-            <button id="decreaseSpeed">- Speed</button>
+            <div id="trafficControls">
+                <button id="increaseTraffic">+ Traffic</button>
+                <button id="decreaseTraffic">- Traffic</button>
+            </div>
+            <div id="speedControls">
+                <button id="increaseSpeed">+ Speed</button>
+                <button id="decreaseSpeed">- Speed</button>
+            </div>
+        </div>
+        <div id="mobileControls">
+            <button id="leftBtn" style="display:none">Left</button>
+            <button id="rightBtn" style="display:none">Right</button>
+            <button id="fireBtn" style="display:none">Fire</button>
         </div>
     </div>
 
@@ -165,7 +226,7 @@
         const scoreDisplay = document.getElementById('score');
         const crossingAlert = document.getElementById('crossingAlert');
         const countdownDisplay = document.getElementById('countdown');
-        const speedometer = document.getElementById('speedometer');
+        const speedometer = document.getElementById('speedValue');
         const hitCounter = document.getElementById('hitCounter');
         const gameOverDisplay = document.getElementById('gameOver');
         const startBtn = document.getElementById('startBtn');
@@ -174,7 +235,6 @@
         const increaseSpeedBtn = document.getElementById('increaseSpeed');
         const decreaseSpeedBtn = document.getElementById('decreaseSpeed');
 
-        // Audio setup
         let audioInitialized = false;
         const tireNoise = new Audio('https://www.myinstants.com/media/sounds/long-brain-fart.mp3');
         tireNoise.loop = true;
@@ -203,13 +263,16 @@
         const destroySound = new Audio('https://www.myinstants.com/media/sounds/roblox-death-sound-oof-sound-effect.mp3');
         destroySound.volume = 0.5;
 
-        // Scale canvas to screen size
+        function playSound(sound) {
+            sound.play().catch(err => console.log(`Audio playback failed: ${err}`));
+        }
+
         function resizeCanvas() {
             const maxWidth = 400;
             const maxHeight = 600;
             const aspectRatio = maxWidth / maxHeight;
             const windowWidth = window.innerWidth;
-            const windowHeight = window.innerHeight - 120; // Account for header and controls
+            const windowHeight = window.innerHeight - 200;
 
             if (windowWidth / windowHeight > aspectRatio) {
                 canvas.height = Math.min(windowHeight, maxHeight);
@@ -218,7 +281,6 @@
                 canvas.width = Math.min(windowWidth, maxWidth);
                 canvas.height = canvas.width / aspectRatio;
             }
-            player.x = canvas.width / 2 - 20; // Reset player position on resize
         }
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
@@ -233,7 +295,9 @@
             y: canvas.height - 80,
             width: 40,
             height: 60,
-            speed: 5
+            speed: 5,
+            braking: false,
+            baseSpeedMultiplier: 0.5 // Base speed for Speed 25
         };
 
         const obstacles = [];
@@ -252,9 +316,6 @@
         ];
 
         let keys = {};
-        let touchX = null;
-        let lastTapTime = 0;
-        const doubleTapThreshold = 300;
         let roadOffset = 0;
         let trafficCircleActive = false;
         let trafficCircleY = -600;
@@ -264,70 +325,111 @@
         let lightFlash = true;
         let flashTimer = 0;
         let gameRunning = false;
+        let gamePaused = false;
         let countdown = 0;
-        let trafficRate = 0.03;
-        let speedMultiplier = 1;
+        let trafficRate = 0.01;
+        let speedMultiplier = 0.5; // Starts at Speed 25
         let timeSinceLastSign = 0;
         let timeSinceLastSchoolCrossing = 0;
         let schoolCrossings = [];
         let roadKill = [];
         const campaignSigns = [];
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        let lastTime = 0;
+        let touchStartTime = 0;
+        let lastSpeedIncreaseScore = 0; // Track last score milestone for speed
+        let lastTrafficIncreaseScore = 0; // Track last score milestone for traffic
 
-        window.addEventListener('load', () => {
-            introMusic.play().catch(err => console.log("Intro music on load failed:", err));
-        });
+        window.addEventListener('load', () => playSound(introMusic));
 
-        // Keyboard controls (for desktop fallback)
         document.addEventListener('keydown', (e) => {
-            if (gameRunning) {
+            if (e.key === 'p' || e.key === 'P') {
+                gamePaused = !gamePaused;
+                if (gamePaused) {
+                    tireNoise.pause();
+                    introMusic.pause();
+                } else if (gameRunning) {
+                    playSound(tireNoise);
+                    playSound(introMusic);
+                }
+            }
+            if (gameRunning && !gamePaused && !isMobile) {
                 e.preventDefault();
                 keys[e.key] = true;
                 if (e.key === 'ArrowUp') {
-                    shootSound.play().catch(err => console.log("Shoot sound failed:", err));
+                    playSound(shootSound);
                     spawnBullet();
+                }
+                if (e.key === 'ArrowDown') {
+                    player.braking = true;
+                    speedMultiplier = Math.max(0.2, player.baseSpeedMultiplier - 0.2);
                 }
                 if (!tireNoise.paused) return;
-                tireNoise.play().catch(err => console.log("Tire noise failed:", err));
+                playSound(tireNoise);
             }
         });
-        document.addEventListener('keyup', (e) => keys[e.key] = false);
+        document.addEventListener('keyup', (e) => {
+            if (!isMobile) {
+                keys[e.key] = false;
+                if (e.key === 'ArrowDown') {
+                    player.braking = false;
+                    speedMultiplier = player.baseSpeedMultiplier;
+                }
+            }
+        });
 
-        // Touch controls (for all devices)
-        canvas.addEventListener('touchstart', (e) => {
-            if (gameRunning) {
+        if (isMobile) {
+            let touchStartX = 0;
+            let lastTap = 0;
+
+            canvas.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                const touch = e.touches[0];
-                touchX = touch.clientX / (window.innerWidth / canvas.width); // Scale to canvas coordinates
-
-                const currentTime = Date.now();
-                if (currentTime - lastTapTime < doubleTapThreshold) {
-                    shootSound.play().catch(err => console.log("Shoot sound failed:", err));
+                touchStartX = e.touches[0].clientX;
+                touchStartTime = new Date().getTime();
+                const currentTime = touchStartTime;
+                const tapGap = currentTime - lastTap;
+                if (tapGap < 300 && gameRunning && !gamePaused) {
+                    playSound(shootSound);
                     spawnBullet();
                 }
-                lastTapTime = currentTime;
-            }
-        });
+                lastTap = currentTime;
+            });
 
-        canvas.addEventListener('touchmove', (e) => {
-            if (gameRunning) {
+            canvas.addEventListener('touchmove', (e) => {
                 e.preventDefault();
-                const touch = e.touches[0];
-                touchX = touch.clientX / (window.innerWidth / canvas.width);
-            }
-        });
+                if (!gameRunning || gamePaused) return;
+                const touchX = e.touches[0].clientX;
+                const deltaX = touchX - touchStartX;
+                player.x += deltaX * 0.1;
+                player.x = Math.max(50, Math.min(canvas.width - 50 - player.width, player.x));
+                touchStartX = touchX;
+                const touchDuration = new Date().getTime() - touchStartTime;
+                if (touchDuration > 500) {
+                    player.braking = true;
+                    speedMultiplier = Math.max(0.2, player.baseSpeedMultiplier - 0.2);
+                }
+                if (!tireNoise.paused) return;
+                playSound(tireNoise);
+            });
 
-        canvas.addEventListener('touchend', (e) => {
-            if (gameRunning) {
+            canvas.addEventListener('touchend', (e) => {
                 e.preventDefault();
-                touchX = null;
-            }
-        });
+                player.braking = false;
+                speedMultiplier = player.baseSpeedMultiplier;
+            });
+        }
 
         startBtn.addEventListener('click', startGame);
         increaseTrafficBtn.addEventListener('click', () => trafficRate = Math.min(0.1, trafficRate + 0.01));
         decreaseTrafficBtn.addEventListener('click', () => trafficRate = Math.max(0.01, trafficRate - 0.01));
-        increaseSpeedBtn.addEventListener('click', () => speedMultiplier = Math.min(2, speedMultiplier + 0.2));
-        decreaseSpeedBtn.addEventListener('click', () => speedMultiplier = Math.max(0.5, speedMultiplier - 0.2));
+        increaseSpeedBtn.addEventListener('click', () => {
+            player.baseSpeedMultiplier = Math.min(2, player.baseSpeedMultiplier + 0.2);
+            if (!player.braking) speedMultiplier = player.baseSpeedMultiplier;
+        });
+        decreaseSpeedBtn.addEventListener('click', () => {
+            player.baseSpeedMultiplier = Math.max(0.5, player.baseSpeedMultiplier - 0.2);
+            if (!player.braking) speedMultiplier = player.baseSpeedMultiplier;
+        });
 
         function spawnBullet() {
             const bullet = {
@@ -352,7 +454,7 @@
                 color: '#FF4500'
             };
             explosions.push(explosion);
-            destroySound.play().catch(err => console.log("Destroy sound failed:", err));
+            playSound(destroySound);
         }
 
         function spawnObstacle() {
@@ -369,13 +471,10 @@
                 barked: false,
                 soundPlayed: false
             });
-            if (type.type === 'police') {
-                sirenSound.play().catch(err => console.log("Siren failed:", err));
-            } else if (type.type === 'schoolbus') {
+            if (type.type === 'police') playSound(sirenSound);
+            else if (type.type === 'schoolbus') {
                 schoolBusCount++;
-                if (schoolBusCount % 3 === 0) {
-                    schoolBusSound.play().catch(err => console.log("School bus sound failed:", err));
-                }
+                if (schoolBusCount % 3 === 0) playSound(schoolBusSound);
             }
         }
 
@@ -393,7 +492,7 @@
             };
             crossingAlert.style.display = 'block';
             crossingAlert.classList.add('flash');
-            kidsYelling.play().catch(err => console.log("Kids yelling failed:", err));
+            playSound(kidsYelling);
             setTimeout(() => {
                 crossingAlert.style.display = 'none';
                 crossingAlert.classList.remove('flash');
@@ -409,7 +508,7 @@
                 height: 40,
                 speed: 2 * speedMultiplier
             });
-            nikkiSignSound.play().catch(err => console.log("Nikki sign sound failed:", err));
+            playSound(nikkiSignSound);
         }
 
         function spawnSchoolCrossing() {
@@ -441,6 +540,9 @@
             hitCount = 0;
             schoolBusCount = 0;
             player.x = canvas.width / 2 - 20;
+            player.braking = false;
+            player.baseSpeedMultiplier = 0.5;
+            speedMultiplier = player.baseSpeedMultiplier;
             obstacles.length = 0;
             bullets.length = 0;
             explosions.length = 0;
@@ -454,6 +556,9 @@
             timeSinceLastCrossing = 0;
             timeSinceLastSign = 0;
             timeSinceLastSchoolCrossing = 0;
+            trafficRate = 0.01;
+            lastSpeedIncreaseScore = 0;
+            lastTrafficIncreaseScore = 0;
             scoreDisplay.textContent = `Score: ${score}`;
             hitCounter.textContent = `Hits: ${hitCount}`;
             gameOverDisplay.style.display = 'none';
@@ -462,19 +567,20 @@
             tireNoise.currentTime = 0;
             sirenSound.pause();
             sirenSound.currentTime = 0;
-            introMusic.play().catch(err => console.log("Intro music reset failed:", err));
+            playSound(introMusic);
         }
 
         function startGame() {
             resetGame();
             gameRunning = false;
+            gamePaused = false;
 
             if (!audioInitialized) {
                 introMusic.play().then(() => {
                     introMusic.pause();
                     introMusic.currentTime = 0;
                     audioInitialized = true;
-                    introMusic.play().catch(err => console.log("Intro music after init failed:", err));
+                    playSound(introMusic);
                 }).catch(err => console.log("Audio init failed:", err));
             }
 
@@ -499,40 +605,50 @@
 
         function endGame(isWin = false) {
             gameRunning = false;
+            gamePaused = false;
             gameOverDisplay.textContent = isWin ? "You Win! You made it to Starbucks!" : "Game Over";
             gameOverDisplay.style.display = 'block';
             if (isWin) {
                 gameOverDisplay.classList.add('winFlash');
-                winSound.play().catch(err => console.log("Win sound failed:", err));
+                playSound(winSound);
             }
             startBtn.textContent = "Start";
             tireNoise.pause();
             tireNoise.currentTime = 0;
             sirenSound.pause();
             sirenSound.currentTime = 0;
-            introMusic.play().catch(err => console.log("Intro music end failed:", err));
+            playSound(introMusic);
+        }
+
+        function updateDifficulty() {
+            // Increase speed by 5 (0.1 multiplier) every 10 points
+            const speedMilestone = Math.floor(score / 10) * 10;
+            if (speedMilestone > lastSpeedIncreaseScore) {
+                player.baseSpeedMultiplier += 0.1; // +5 speed (0.1 * 50)
+                lastSpeedIncreaseScore = speedMilestone;
+                if (!player.braking) speedMultiplier = player.baseSpeedMultiplier;
+            }
+
+            // Increase traffic by 0.01 every 15 points
+            const trafficMilestone = Math.floor(score / 15) * 15;
+            if (trafficMilestone > lastTrafficIncreaseScore) {
+                trafficRate = Math.min(0.1, trafficRate + 0.01); // +1 traffic rate
+                lastTrafficIncreaseScore = trafficMilestone;
+            }
         }
 
         function update() {
-            if (!gameRunning) return;
+            if (!gameRunning || gamePaused) return;
 
-            // Keyboard steering (desktop fallback)
-            if (keys['ArrowLeft'] && player.x > 50) player.x -= player.speed;
-            if (keys['ArrowRight'] && player.x < canvas.width - 50 - player.width) player.x += player.speed;
-
-            // Touch steering (all devices)
-            if (touchX !== null) {
-                const targetX = touchX - player.width / 2;
-                if (targetX > 50 && targetX < canvas.width - 50 - player.width) {
-                    if (targetX < player.x) player.x -= Math.min(player.speed, player.x - targetX);
-                    if (targetX > player.x) player.x += Math.min(player.speed, targetX - player.x);
-                }
+            if (!isMobile) {
+                if (keys['ArrowLeft'] && player.x > 50) player.x -= player.speed;
+                if (keys['ArrowRight'] && player.x < canvas.width - 50 - player.width) player.x += player.speed;
             }
 
             roadOffset += 2 * speedMultiplier;
             if (roadOffset > 40) roadOffset = 0;
 
-            speedometer.textContent = `Speed: ${Math.round(speedMultiplier * 50)}`;
+            speedometer.textContent = `${Math.round(speedMultiplier * 50)}`;
 
             flashTimer += 1/60;
             if (flashTimer > 0.5) {
@@ -572,6 +688,7 @@
                 }
             }
 
+            updateDifficulty();
             timeSinceLastCircle += 1/60;
             if (timeSinceLastCircle > 120 && !trafficCircleActive) {
                 trafficCircleActive = true;
@@ -605,7 +722,6 @@
             }
 
             if (Math.random() < 0.005) spawnRoadKill();
-
             if (Math.random() < trafficRate) spawnObstacle();
 
             if (crossingGolfCart) {
@@ -614,12 +730,12 @@
                     score -= 2;
                     hitCount += 1;
                     hitCounter.textContent = `Hits: ${hitCount}`;
-                    crashSound.play().catch(err => console.log("Crash failed:", err));
+                    playSound(crashSound);
                     crossingGolfCart = null;
                     if (hitCount >= maxHits) endGame();
                 } else if (crossingGolfCart.x > canvas.width && !crossingGolfCart.passed) {
                     score += 1;
-                    pointSound.play().catch(err => console.log("Point failed:", err));
+                    playSound(pointSound);
                     crossingGolfCart.passed = true;
                     if (score >= winScore) endGame(true);
                 }
@@ -629,7 +745,7 @@
                 obstacles[i].y += obstacles[i].speed;
 
                 if (obstacles[i].type === 'dog' && !obstacles[i].barked && obstacles[i].y > player.y - 100) {
-                    dogBark.play().catch(err => console.log("Dog bark failed:", err));
+                    playSound(dogBark);
                     obstacles[i].barked = true;
                 }
 
@@ -637,7 +753,7 @@
                     score -= 2;
                     hitCount += 1;
                     hitCounter.textContent = `Hits: ${hitCount}`;
-                    crashSound.play().catch(err => console.log("Crash failed:", err));
+                    playSound(crashSound);
                     obstacles.splice(i, 1);
                     if (hitCount >= maxHits) endGame();
                     continue;
@@ -652,7 +768,7 @@
 
                 if (!obstacles[i].passed && obstacles[i].y > player.y + player.height) {
                     score += 1;
-                    pointSound.play().catch(err => console.log("Point failed:", err));
+                    playSound(pointSound);
                     obstacles[i].passed = true;
                     if (score >= winScore) endGame(true);
                 }
@@ -686,6 +802,13 @@
             scoreDisplay.textContent = `Score: ${score}`;
         }
 
+        function drawHUD() {
+            if (hitCount > maxHits * 0.8) {
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -693,17 +816,40 @@
             ctx.fillRect(0, 0, 50, canvas.height);
             ctx.fillRect(canvas.width - 50, 0, 50, canvas.height);
 
+            let treeCounter = 0;
             for (let y = roadOffset; y < canvas.height; y += 100) {
                 ctx.fillStyle = '#8B4513';
                 ctx.fillRect(20, y, 10, 20);
                 ctx.fillRect(canvas.width - 30, y, 10, 20);
                 ctx.fillStyle = '#006400';
-                ctx.beginPath();
-                ctx.arc(25, y - 10, 15, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(canvas.width - 25, y - 10, 15, 0, Math.PI * 2);
-                ctx.fill();
+                
+                const isPineLeft = (treeCounter % 2 === 0);
+                const isPineRight = (treeCounter % 2 === 1);
+                
+                if (isPineLeft) {
+                    ctx.beginPath();
+                    ctx.moveTo(25, y - 25);
+                    ctx.lineTo(10, y + 5);
+                    ctx.lineTo(40, y + 5);
+                    ctx.fill();
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(25, y - 10, 15, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                if (isPineRight) {
+                    ctx.beginPath();
+                    ctx.moveTo(canvas.width - 25, y - 25);
+                    ctx.lineTo(canvas.width - 40, y + 5);
+                    ctx.lineTo(canvas.width - 10, y + 5);
+                    ctx.fill();
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(canvas.width - 25, y - 10, 15, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                treeCounter++;
             }
 
             ctx.fillStyle = '#666666';
@@ -773,6 +919,8 @@
                 ctx.fill();
                 ctx.globalAlpha = 1;
             });
+
+            drawHUD();
         }
 
         function drawVehicle(x, y, width, height, color, type) {
@@ -851,6 +999,19 @@
                     ctx.fillRect(x + width * 0.7, y - 5, width * 0.2, 10);
                     ctx.fillRect(x + width * 0.1, y + height - 5, width * 0.2, 10);
                     ctx.fillRect(x + width * 0.7, y + height - 5, width * 0.2, 10);
+                    if (type === 'car' && x === player.x && y === player.y) {
+                        ctx.fillStyle = '#808080';
+                        ctx.font = '10px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Soccer', x + width / 2, y + height / 2 - 5);
+                        ctx.fillText('Mom', x + width / 2, y + height / 2 + 5);
+                        ctx.textAlign = 'left';
+                        if (player.braking) {
+                            ctx.fillStyle = '#FF0000';
+                            ctx.fillRect(x + width * 0.1, y + height, width * 0.2, 5);
+                            ctx.fillRect(x + width * 0.7, y + height, width * 0.2, 5);
+                        }
+                    }
                 } else if (type === 'ebike' || type === 'biker') {
                     ctx.fillRect(x + width * 0.25, y - 5, width * 0.5, 10);
                     ctx.fillRect(x + width * 0.25, y + height - 5, width * 0.5, 10);
@@ -858,19 +1019,22 @@
             }
         }
 
-        startBtn.addEventListener('click', startGame);
-        increaseTrafficBtn.addEventListener('click', () => trafficRate = Math.min(0.1, trafficRate + 0.01));
-        decreaseTrafficBtn.addEventListener('click', () => trafficRate = Math.max(0.01, trafficRate - 0.01));
-        increaseSpeedBtn.addEventListener('click', () => speedMultiplier = Math.min(2, speedMultiplier + 0.2));
-        decreaseSpeedBtn.addEventListener('click', () => speedMultiplier = Math.max(0.5, speedMultiplier - 0.2));
+        function gameLoop(timestamp) {
+            const fps = 60;
+            const interval = 1000 / fps;
+            if (!lastTime) lastTime = timestamp;
 
-        function gameLoop() {
-            update();
-            draw();
+            if (timestamp - lastTime >= interval) {
+                if (!gamePaused) {
+                    update();
+                    draw();
+                }
+                lastTime = timestamp;
+            }
             requestAnimationFrame(gameLoop);
         }
 
-        gameLoop();
+        requestAnimationFrame(gameLoop);
     </script>
 </body>
 </html>
