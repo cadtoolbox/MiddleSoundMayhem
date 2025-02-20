@@ -24,9 +24,8 @@
             border: 1px solid black;
             width: 100%;
             height: 100%;
-            max-width: 400px; /* Default max size */
+            max-width: 400px;
             max-height: 600px;
-            touch-action: none; /* Prevent default touch actions */
         }
         #scoreContainer {
             display: flex;
@@ -111,14 +110,29 @@
         #controls {
             margin-top: 10px;
             position: absolute;
-            bottom: 10px;
+            bottom: 60px; /* Increased to accommodate mobile controls */
             width: 100%;
             z-index: 10;
         }
+        #mobileControls {
+            position: absolute;
+            bottom: 10px;
+            width: 100%;
+            display: none;
+            z-index: 10;
+        }
         button {
-            padding: 5px 10px;
+            padding: 10px 20px;
             margin: 0 5px;
             font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:active {
+            background-color: #45a049;
         }
         .flash {
             animation: flash 0.5s infinite;
@@ -135,6 +149,13 @@
             0% { color: white; }
             50% { color: red; }
             100% { color: white; }
+        }
+        @media only screen and (max-width: 768px) {
+            #mobileControls {
+                display: flex;
+                justify-content: center;
+                gap: 10px;
+            }
         }
     </style>
 </head>
@@ -157,6 +178,11 @@
             <button id="increaseSpeed">+ Speed</button>
             <button id="decreaseSpeed">- Speed</button>
         </div>
+        <div id="mobileControls">
+            <button id="leftBtn">Left</button>
+            <button id="rightBtn">Right</button>
+            <button id="fireBtn">Fire</button>
+        </div>
     </div>
 
     <script>
@@ -173,6 +199,9 @@
         const decreaseTrafficBtn = document.getElementById('decreaseTraffic');
         const increaseSpeedBtn = document.getElementById('increaseSpeed');
         const decreaseSpeedBtn = document.getElementById('decreaseSpeed');
+        const leftBtn = document.getElementById('leftBtn');
+        const rightBtn = document.getElementById('rightBtn');
+        const fireBtn = document.getElementById('fireBtn');
 
         // Audio setup
         let audioInitialized = false;
@@ -251,9 +280,6 @@
         ];
 
         let keys = {};
-        let touchX = null;
-        let lastTapTime = 0;
-        const doubleTapThreshold = 300; // Milliseconds for double tap
         let roadOffset = 0;
         let trafficCircleActive = false;
         let trafficCircleY = -600;
@@ -272,13 +298,16 @@
         let roadKill = [];
         const campaignSigns = [];
 
+        // Detect if it's a mobile device
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
         window.addEventListener('load', () => {
             introMusic.play().catch(err => console.log("Intro music on load failed:", err));
         });
 
-        // Keyboard controls (for desktop)
+        // Desktop controls
         document.addEventListener('keydown', (e) => {
-            if (gameRunning) {
+            if (gameRunning && !isMobile) {
                 e.preventDefault();
                 keys[e.key] = true;
                 if (e.key === 'ArrowUp' && gameRunning) {
@@ -289,38 +318,41 @@
                 tireNoise.play().catch(err => console.log("Tire noise failed:", err));
             }
         });
-        document.addEventListener('keyup', (e) => keys[e.key] = false);
+        document.addEventListener('keyup', (e) => {
+            if (!isMobile) keys[e.key] = false;
+        });
 
-        // Touch controls (for mobile)
-        canvas.addEventListener('touchstart', (e) => {
-            if (gameRunning) {
+        // Mobile button controls
+        if (isMobile) {
+            let leftPressed = false;
+            let rightPressed = false;
+
+            leftBtn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                const touch = e.touches[0];
-                touchX = touch.clientX / window.innerWidth * canvas.width; // Scale to canvas
+                leftPressed = true;
+            });
+            leftBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                leftPressed = false;
+            });
 
-                const currentTime = Date.now();
-                if (currentTime - lastTapTime < doubleTapThreshold) {
+            rightBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                rightPressed = true;
+            });
+            rightBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                rightPressed = false;
+            });
+
+            fireBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (gameRunning) {
                     shootSound.play().catch(err => console.log("Shoot sound failed:", err));
                     spawnBullet();
                 }
-                lastTapTime = currentTime;
-            }
-        });
-
-        canvas.addEventListener('touchmove', (e) => {
-            if (gameRunning) {
-                e.preventDefault();
-                const touch = e.touches[0];
-                touchX = touch.clientX / window.innerWidth * canvas.width;
-            }
-        });
-
-        canvas.addEventListener('touchend', (e) => {
-            if (gameRunning) {
-                e.preventDefault();
-                touchX = null;
-            }
-        });
+            });
+        }
 
         startBtn.addEventListener('click', startGame);
         increaseTrafficBtn.addEventListener('click', () => trafficRate = Math.min(0.1, trafficRate + 0.01));
@@ -515,17 +547,14 @@
         function update() {
             if (!gameRunning) return;
 
-            // Keyboard steering (desktop)
-            if (keys['ArrowLeft'] && player.x > 50) player.x -= player.speed;
-            if (keys['ArrowRight'] && player.x < canvas.width - 50 - player.width) player.x += player.speed;
-
-            // Touch steering (mobile)
-            if (touchX !== null) {
-                const targetX = touchX - player.width / 2;
-                if (targetX > 50 && targetX < canvas.width - 50 - player.width) {
-                    if (targetX < player.x) player.x -= Math.min(player.speed, player.x - targetX);
-                    if (targetX > player.x) player.x += Math.min(player.speed, targetX - player.x);
-                }
+            if (isMobile) {
+                // Mobile button steering
+                if (leftBtn.touchstart && player.x > 50) player.x -= player.speed;
+                if (rightBtn.touchstart && player.x < canvas.width - 50 - player.width) player.x += player.speed;
+            } else {
+                // Desktop keyboard steering
+                if (keys['ArrowLeft'] && player.x > 50) player.x -= player.speed;
+                if (keys['ArrowRight'] && player.x < canvas.width - 50 - player.width) player.x += player.speed;
             }
 
             roadOffset += 2 * speedMultiplier;
