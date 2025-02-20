@@ -388,7 +388,7 @@
         });
 
         if (isMobile) {
-            let lastTouchX = player.x + player.width / 2; // Initialize to center of SUV
+            let lastTouchX = player.x + player.width / 2;
 
             canvas.addEventListener('touchstart', (e) => {
                 e.preventDefault();
@@ -409,7 +409,6 @@
                 e.preventDefault();
                 if (!gameRunning || gamePaused) return;
                 const touchX = e.touches[0].clientX;
-                // Directly set SUV position to follow finger, adjusted for canvas offset
                 const canvasRect = canvas.getBoundingClientRect();
                 const canvasX = touchX - canvasRect.left;
                 player.x = Math.max(50, Math.min(canvas.width - 50 - player.width, canvasX - player.width / 2));
@@ -418,7 +417,6 @@
 
             canvas.addEventListener('touchend', (e) => {
                 e.preventDefault();
-                // No braking or position reset on mobile
             });
         }
 
@@ -616,11 +614,13 @@
                 playSound(winSound);
             }
             startBtn.textContent = "Start";
-            tireNoise.pause();
-            tireNoise.currentTime = 0;
+            tireNoise.pause(); // Ensure tire noise stops
+            tireNoise.currentTime = 0; // Reset to start
             sirenSound.pause();
             sirenSound.currentTime = 0;
-            playSound(introMusic);
+            introMusic.pause(); // Stop intro music before restarting
+            introMusic.currentTime = 0;
+            playSound(introMusic); // Restart intro music
         }
 
         function updateDifficulty() {
@@ -681,6 +681,43 @@
             bulletsToRemove.sort((a, b) => b - a).forEach(index => bullets.splice(index, 1));
             obstaclesToRemove.sort((a, b) => b - a).forEach(index => obstacles.splice(index, 1));
 
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].y += obstacles[i].speed;
+
+                if (obstacles[i].type === 'dog' && !obstacles[i].barked && obstacles[i].y > player.y - 100) {
+                    playSound(dogBark);
+                    obstacles[i].barked = true;
+                }
+
+                if (checkCollision(player, obstacles[i])) {
+                    score -= 2;
+                    hitCount += 1;
+                    hitCounter.textContent = `Hits: ${hitCount}`;
+                    playSound(crashSound);
+                    obstacles.splice(i, 1);
+                    if (hitCount >= maxHits) endGame(false); // Pass false for loss
+                    continue;
+                }
+
+                if (obstacles[i].type === 'police' && obstacles[i].y > player.y + player.height && !obstacles[i].passed) {
+                    if (!obstacles[i].soundPlayed) {
+                        sirenSound.volume = Math.max(0, sirenSound.volume - 0.1);
+                        obstacles[i].soundPlayed = true;
+                    }
+                }
+
+                if (!obstacles[i].passed && obstacles[i].y > player.y + player.height) {
+                    score += 1;
+                    playSound(pointSound);
+                    obstacles[i].passed = true;
+                    if (score >= winScore) endGame(true); // Pass true for win
+                }
+
+                if (obstacles[i].y > canvas.height) {
+                    obstacles.splice(i, 1);
+                }
+            }
+
             for (let i = explosions.length - 1; i >= 0; i--) {
                 explosions[i].time += 1/60;
                 explosions[i].radius += (explosions[i].maxRadius - 10) / (explosions[i].duration * 60);
@@ -733,70 +770,12 @@
                     hitCounter.textContent = `Hits: ${hitCount}`;
                     playSound(crashSound);
                     crossingGolfCart = null;
-                    if (hitCount >= maxHits) endGame();
+                    if (hitCount >= maxHits) endGame(false);
                 } else if (crossingGolfCart.x > canvas.width && !crossingGolfCart.passed) {
                     score += 1;
                     playSound(pointSound);
                     crossingGolfCart.passed = true;
                     if (score >= winScore) endGame(true);
-                }
-            }
-
-            for (let i = obstacles.length - 1; i >= 0; i--) {
-                obstacles[i].y += obstacles[i].speed;
-
-                if (obstacles[i].type === 'dog' && !obstacles[i].barked && obstacles[i].y > player.y - 100) {
-                    playSound(dogBark);
-                    obstacles[i].barked = true;
-                }
-
-                if (checkCollision(player, obstacles[i])) {
-                    score -= 2;
-                    hitCount += 1;
-                    hitCounter.textContent = `Hits: ${hitCount}`;
-                    playSound(crashSound);
-                    obstacles.splice(i, 1);
-                    if (hitCount >= maxHits) endGame();
-                    continue;
-                }
-
-                if (obstacles[i].type === 'police' && obstacles[i].y > player.y + player.height && !obstacles[i].passed) {
-                    if (!obstacles[i].soundPlayed) {
-                        sirenSound.volume = Math.max(0, sirenSound.volume - 0.1);
-                        obstacles[i].soundPlayed = true;
-                    }
-                }
-
-                if (!obstacles[i].passed && obstacles[i].y > player.y + player.height) {
-                    score += 1;
-                    playSound(pointSound);
-                    obstacles[i].passed = true;
-                    if (score >= winScore) endGame(true);
-                }
-
-                if (obstacles[i].y > canvas.height) {
-                    obstacles.splice(i, 1);
-                }
-            }
-
-            for (let i = campaignSigns.length - 1; i >= 0; i--) {
-                campaignSigns[i].y += campaignSigns[i].speed;
-                if (campaignSigns[i].y > canvas.height) {
-                    campaignSigns.splice(i, 1);
-                }
-            }
-
-            for (let i = schoolCrossings.length - 1; i >= 0; i--) {
-                schoolCrossings[i].y += schoolCrossings[i].speed;
-                if (schoolCrossings[i].y > canvas.height) {
-                    schoolCrossings.splice(i, 1);
-                }
-            }
-
-            for (let i = roadKill.length - 1; i >= 0; i--) {
-                roadKill[i].y += roadKill[i].speed;
-                if (roadKill[i].y > canvas.height) {
-                    roadKill.splice(i, 1);
                 }
             }
 
