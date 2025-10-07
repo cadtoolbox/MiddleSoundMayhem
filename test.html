@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nativity Charades - Christmas Game</title>
+    <title>Nativity Scene Builder - Interactive Christmas Game</title>
     <style>
         body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(to bottom, #1e3c72, #2a5298);
-            color: #fff;
+            font-family: 'Georgia', serif;
+            background: linear-gradient(to bottom, #1a1a2e, #16213e, #0f3460);
+            color: #f8f9fa;
             text-align: center;
             margin: 0;
             padding: 20px;
@@ -19,237 +19,299 @@
         }
         h1 {
             color: #ffd700;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
             margin-bottom: 10px;
+            animation: sparkle 2s ease-in-out infinite alternate;
+        }
+        @keyframes sparkle {
+            from { text-shadow: 2px 2px 4px rgba(0,0,0,0.7), 0 0 5px #ffd700; }
+            to { text-shadow: 2px 2px 4px rgba(0,0,0,0.7), 0 0 15px #ffd700; }
         }
         .subtitle {
             margin-bottom: 30px;
             font-style: italic;
+            color: #e74c3c;
         }
         #game-container {
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
+            border-radius: 20px;
             padding: 30px;
-            max-width: 600px;
+            max-width: 800px;
             margin: 0 auto;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+            position: relative;
         }
-        #prompt {
-            font-size: 2em;
-            font-weight: bold;
-            color: #ff6b6b;
-            margin: 20px 0;
-            padding: 20px;
-            background: rgba(255, 107, 107, 0.2);
+        #scene {
+            width: 600px;
+            height: 400px;
+            margin: 20px auto;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400"><rect width="600" height="400" fill="%232c1810"/><polygon points="0,400 600,400 300,200" fill="%233d271b"/><circle cx="300" cy="50" r="40" fill="%23ffd700"/><circle cx="300" cy="50" r="20" fill="%23fff"/></svg>') no-repeat center/cover;
+            border: 3px dashed #ffd700;
             border-radius: 10px;
-            min-height: 100px;
+            position: relative;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: space-around;
+            justify-content: space-around;
+        }
+        .drop-zone {
+            width: 120px;
+            height: 100px;
+            border: 2px dotted #ffd700;
+            margin: 10px;
+            border-radius: 5px;
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-        #timer {
-            font-size: 3em;
+            font-size: 0.8em;
             color: #ffd700;
-            margin: 20px 0;
+            transition: all 0.3s;
         }
-        button {
-            background: #4ecdc4;
+        .drop-zone.valid { border-color: #27ae60; background: rgba(39, 174, 96, 0.2); }
+        .drop-zone.invalid { border-color: #e74c3c; background: rgba(231, 76, 60, 0.2); }
+        #items {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px 0;
+            gap: 10px;
+        }
+        .item {
+            width: 80px;
+            height: 80px;
+            background: #e74c3c;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #fff;
+            cursor: grab;
+            transition: transform 0.2s;
+            user-select: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        .item:active { cursor: grabbing; transform: scale(1.1); }
+        .item.dragging { opacity: 0.5; transform: rotate(5deg); }
+        #progress {
+            font-size: 1.5em;
+            margin: 20px 0;
+            color: #27ae60;
+        }
+        #feedback {
+            font-size: 1.3em;
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .success { background: rgba(39, 174, 96, 0.3); color: #27ae60; }
+        .complete {
+            animation: celebrate 1s infinite;
+        }
+        @keyframes celebrate {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        #reset-btn {
+            background: #3498db;
             color: #fff;
             border: none;
-            padding: 15px 30px;
-            font-size: 1.2em;
+            padding: 12px 24px;
+            font-size: 1.1em;
             border-radius: 8px;
             cursor: pointer;
             margin: 10px;
             transition: background 0.3s;
         }
-        button:hover {
-            background: #45b7aa;
-        }
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-        #score {
-            font-size: 1.5em;
-            margin: 20px 0;
-        }
-        .team-score {
-            display: inline-block;
-            margin: 0 20px;
-            padding: 10px;
-            background: rgba(255, 215, 0, 0.2);
-            border-radius: 5px;
+        #reset-btn:hover {
+            background: #2980b9;
         }
         .instructions {
             margin-top: 30px;
             font-size: 0.9em;
             line-height: 1.4;
-            background: rgba(0,0,0,0.2);
+            background: rgba(0,0,0,0.3);
             padding: 15px;
             border-radius: 8px;
         }
-        #next-prompt {
-            display: none;
+        .verse {
+            font-style: italic;
+            color: #ffd700;
+            font-size: 1.2em;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
     <div id="game-container">
-        <h1>Nativity Charades</h1>
-        <p class="subtitle">A fun Christmas game to celebrate the birth of Jesus!</p>
+        <h1>Nativity Scene Builder</h1>
+        <p class="subtitle">Drag and drop to build the holy scene from the Christmas story!</p>
         
-        <div id="score">
-            <div class="team-score">Team 1: <span id="team1-score">0</span></div>
-            <div class="team-score">Team 2: <span id="team2-score">0</span></div>
+        <div id="progress">Pieces placed: <span id="placed-count">0</span>/7</div>
+        
+        <div id="scene">
+            <div class="drop-zone" data-target="mary">Mary</div>
+            <div class="drop-zone" data-target="joseph">Joseph</div>
+            <div class="drop-zone" data-target="baby">Baby Jesus</div>
+            <div class="drop-zone" data-target="shepherd">Shepherd</div>
+            <div class="drop-zone" data-target="wise">Wise Man</div>
+            <div class="drop-zone" data-target="donkey">Donkey</div>
+            <div class="drop-zone" data-target="star">Guiding Star</div>
         </div>
         
-        <div id="prompt">Click "Start Round" to begin!</div>
+        <div id="items">
+            <div class="item" draggable="true" data-item="mary">👩 Mary</div>
+            <div class="item" draggable="true" data-item="joseph">👨 Joseph</div>
+            <div class="item" draggable="true" data-item="baby">👶 Baby</div>
+            <div class="item" draggable="true" data-item="shepherd">🐑 Shepherd</div>
+            <div class="item" draggable="true" data-item="wise">👑 Wise Man</div>
+            <div class="item" draggable="true" data-item="donkey">🦙 Donkey</div>
+            <div class="item" draggable="true" data-item="star">⭐ Star</div>
+        </div>
         
-        <div id="timer">60</div>
+        <button id="reset-btn">Reset Scene</button>
         
-        <button id="start-btn">Start Round</button>
-        <button id="next-prompt">Next Prompt</button>
-        <button id="team1-btn">Team 1 Got It!</button>
-        <button id="team2-btn">Team 2 Got It!</button>
+        <div id="feedback"></div>
         
         <div class="instructions">
             <strong>How to Play:</strong><br>
-            1. Choose a team and an actor.<br>
-            2. Actor sees the prompt and acts it out silently (1 minute timer).<br>
-            3. Teammates guess! If correct, click your team's button.<br>
-            4. Play rounds until all prompts are used. Highest score wins!<br>
-            Prompts are from the Nativity story (Luke 2 & Matthew 2).
+            1. Drag items from the bottom and drop them into the matching zones above.<br>
+            2. Get all 7 right to complete the Nativity scene!<br>
+            3. Each correct placement reveals a fun fact from the Bible.<br>
+            4. Single-player fun—perfect for reflecting on the true Christmas miracle.
         </div>
     </div>
 
     <script>
-        const prompts = [
-            "Angel announcing to Mary",
-            "Joseph traveling to Bethlehem",
-            "No room at the inn",
-            "Baby Jesus in the manger",
-            "Shepherds in the fields",
-            "Angel choir to shepherds",
-            "Wise men following the star",
-            "Wise men presenting gifts",
-            "Holy family fleeing to Egypt",
-            "Mary visiting Elizabeth",
-            "Census in Bethlehem",
-            "Star over the stable"
-        ];
+        const items = document.querySelectorAll('.item');
+        const dropZones = document.querySelectorAll('.drop-zone');
+        const placedCountEl = document.getElementById('placed-count');
+        const feedbackEl = document.getElementById('feedback');
+        const sceneEl = document.getElementById('scene');
+        const resetBtn = document.getElementById('reset-btn');
 
-        let currentPrompt = '';
-        let timerInterval;
-        let timeLeft = 60;
-        let gameActive = false;
-        let currentTeam = 1; // Start with Team 1
+        let placedCount = 0;
+        let placedItems = new Map(); // Track placed items
 
-        const promptEl = document.getElementById('prompt');
-        const timerEl = document.getElementById('timer');
-        const startBtn = document.getElementById('start-btn');
-        const nextBtn = document.getElementById('next-prompt');
-        const team1Btn = document.getElementById('team1-btn');
-        const team2Btn = document.getElementById('team2-btn');
-        const team1ScoreEl = document.getElementById('team1-score');
-        const team2ScoreEl = document.getElementById('team2-score');
+        const facts = {
+            mary: "Mary treasured all these things in her heart (Luke 2:19).",
+            joseph: "Joseph was a righteous man who cared for his family (Matthew 1:19).",
+            baby: "She wrapped him in cloths and placed him in a manger (Luke 2:7).",
+            shepherd: "The shepherds hurried to see the newborn Savior (Luke 2:16).",
+            wise: "The wise men worshiped Him and presented gifts (Matthew 2:11).",
+            donkey: "They traveled on a donkey to Bethlehem (Luke 2:4-5).",
+            star: "The star guided the wise men to the King (Matthew 2:2)."
+        };
 
-        let team1Score = 0;
-        let team2Score = 0;
-        let usedPrompts = new Set();
+        // Drag events
+        items.forEach(item => {
+            item.addEventListener('dragstart', dragStart);
+            item.addEventListener('dragend', dragEnd);
+        });
 
-        function getRandomPrompt() {
-            let available = prompts.filter((p, i) => !usedPrompts.has(i));
-            if (available.length === 0) {
-                available = prompts; // Reset if all used
-                usedPrompts.clear();
-            }
-            const randomIndex = Math.floor(Math.random() * available.length);
-            const prompt = available[randomIndex];
-            usedPrompts.add(prompts.indexOf(prompt));
-            return prompt;
+        function dragStart(e) {
+            e.dataTransfer.setData('text/plain', e.target.dataset.item);
+            e.target.classList.add('dragging');
         }
 
-        function startTimer() {
-            timeLeft = 60;
-            timerEl.textContent = timeLeft;
-            gameActive = true;
-            startBtn.disabled = true;
-            nextBtn.style.display = 'none';
-            team1Btn.disabled = false;
-            team2Btn.disabled = false;
+        function dragEnd(e) {
+            e.target.classList.remove('dragging');
+        }
 
-            timerInterval = setInterval(() => {
-                timeLeft--;
-                timerEl.textContent = timeLeft;
-                if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    gameActive = false;
-                    startBtn.disabled = false;
-                    nextBtn.style.display = 'inline-block';
-                    team1Btn.disabled = true;
-                    team2Btn.disabled = true;
-                    promptEl.textContent = 'Time\'s up! Next prompt?';
+        // Drop zone events
+        dropZones.forEach(zone => {
+            zone.addEventListener('dragover', dragOver);
+            zone.addEventListener('dragenter', dragEnter);
+            zone.addEventListener('dragleave', dragLeave);
+            zone.addEventListener('drop', drop);
+        });
+
+        function dragOver(e) {
+            e.preventDefault();
+        }
+
+        function dragEnter(e) {
+            e.preventDefault();
+            e.target.classList.add('valid');
+        }
+
+        function dragLeave(e) {
+            e.target.classList.remove('valid');
+        }
+
+        function drop(e) {
+            e.preventDefault();
+            const itemId = e.dataTransfer.getData('text/plain');
+            const zoneId = e.target.dataset.target;
+
+            if (itemId === zoneId && !placedItems.has(itemId)) {
+                // Correct drop
+                const draggedItem = document.querySelector(`[data-item="${itemId}"]`);
+                e.target.appendChild(draggedItem);
+                draggedItem.style.transform = 'scale(0.8)';
+                placedItems.set(itemId, true);
+                placedCount++;
+                placedCountEl.textContent = placedCount;
+
+                e.target.classList.add('valid');
+                showFeedback(`Correct! ${facts[itemId]}`, 'success');
+
+                if (placedCount === 7) {
+                    completeScene();
                 }
-            }, 1000);
+
+                setTimeout(() => {
+                    e.target.classList.remove('valid');
+                }, 500);
+            } else {
+                // Wrong drop
+                e.target.classList.add('invalid');
+                showFeedback('Try a different spot!', '');
+                setTimeout(() => {
+                    e.target.classList.remove('invalid');
+                }, 500);
+            }
         }
 
-        function newPrompt() {
-            currentPrompt = getRandomPrompt();
-            promptEl.textContent = currentPrompt;
-            clearInterval(timerInterval);
-            gameActive = false;
-            startBtn.disabled = false;
-            nextBtn.style.display = 'none';
-            team1Btn.disabled = true;
-            team2Btn.disabled = true;
+        function showFeedback(message, className = '') {
+            feedbackEl.textContent = message;
+            if (className) feedbackEl.classList.add(className);
+            feedbackEl.style.display = 'block';
+            setTimeout(() => {
+                feedbackEl.style.display = 'none';
+                if (className) feedbackEl.classList.remove(className);
+            }, 3000);
         }
 
-        startBtn.addEventListener('click', () => {
-            newPrompt();
-            startTimer();
-        });
+        function completeScene() {
+            sceneEl.classList.add('complete');
+            feedbackEl.innerHTML = '<div class="success">🎄 Scene complete! "For unto you is born this day in the city of David a Savior, who is Christ the Lord" (Luke 2:11). Merry Christmas! 🎄</div>';
+            feedbackEl.style.display = 'block';
+            feedbackEl.classList.add('success');
+        }
 
-        nextBtn.addEventListener('click', () => {
-            newPrompt();
+        resetBtn.addEventListener('click', () => {
+            placedCount = 0;
+            placedItems.clear();
+            placedCountEl.textContent = 0;
+            items.forEach(item => {
+                const parent = item.parentNode;
+                if (parent && parent.classList.contains('drop-zone')) {
+                    parent.removeChild(item);
+                }
+                document.getElementById('items').appendChild(item);
+                item.style.transform = '';
+            });
+            dropZones.forEach(zone => zone.classList.remove('valid', 'invalid'));
+            feedbackEl.style.display = 'none';
+            sceneEl.classList.remove('complete');
         });
-
-        team1Btn.addEventListener('click', () => {
-            if (gameActive) {
-                team1Score++;
-                team1ScoreEl.textContent = team1Score;
-                clearInterval(timerInterval);
-                gameActive = false;
-                startBtn.disabled = false;
-                nextBtn.style.display = 'inline-block';
-                team1Btn.disabled = true;
-                team2Btn.disabled = true;
-                promptEl.textContent = 'Correct! Great job, Team 1!';
-                setTimeout(() => {
-                    newPrompt();
-                }, 2000);
-            }
-        });
-
-        team2Btn.addEventListener('click', () => {
-            if (gameActive) {
-                team2Score++;
-                team2ScoreEl.textContent = team2Score;
-                clearInterval(timerInterval);
-                gameActive = false;
-                startBtn.disabled = false;
-                nextBtn.style.display = 'inline-block';
-                team1Btn.disabled = true;
-                team2Btn.disabled = true;
-                promptEl.textContent = 'Correct! Great job, Team 2!';
-                setTimeout(() => {
-                    newPrompt();
-                }, 2000);
-            }
-        });
-
-        // Initialize
-        newPrompt();
     </script>
 </body>
 </html>
