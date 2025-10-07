@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nativity Charades - Christmas Game</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(to bottom, #1e3c72, #2a5298);
+            color: #fff;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        h1 {
+            color: #ffd700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+        #game-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 600px;
+            margin: 0 auto;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        #prompt {
+            font-size: 2em;
+            font-weight: bold;
+            color: #ff6b6b;
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 107, 107, 0.2);
+            border-radius: 10px;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #timer {
+            font-size: 3em;
+            color: #ffd700;
+            margin: 20px 0;
+        }
+        button {
+            background: #4ecdc4;
+            color: #fff;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #45b7aa;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        #score {
+            font-size: 1.5em;
+            margin: 20px 0;
+        }
+        .team-score {
+            display: inline-block;
+            margin: 0 20px;
+            padding: 10px;
+            background: rgba(255, 215, 0, 0.2);
+            border-radius: 5px;
+        }
+        .instructions {
+            margin-top: 30px;
+            font-size: 0.9em;
+            line-height: 1.4;
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 8px;
+        }
+        #next-prompt {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>Nativity Charades</h1>
+        <p class="subtitle">A fun Christmas game to celebrate the birth of Jesus!</p>
+        
+        <div id="score">
+            <div class="team-score">Team 1: <span id="team1-score">0</span></div>
+            <div class="team-score">Team 2: <span id="team2-score">0</span></div>
+        </div>
+        
+        <div id="prompt">Click "Start Round" to begin!</div>
+        
+        <div id="timer">60</div>
+        
+        <button id="start-btn">Start Round</button>
+        <button id="next-prompt">Next Prompt</button>
+        <button id="team1-btn">Team 1 Got It!</button>
+        <button id="team2-btn">Team 2 Got It!</button>
+        
+        <div class="instructions">
+            <strong>How to Play:</strong><br>
+            1. Choose a team and an actor.<br>
+            2. Actor sees the prompt and acts it out silently (1 minute timer).<br>
+            3. Teammates guess! If correct, click your team's button.<br>
+            4. Play rounds until all prompts are used. Highest score wins!<br>
+            Prompts are from the Nativity story (Luke 2 & Matthew 2).
+        </div>
+    </div>
+
+    <script>
+        const prompts = [
+            "Angel announcing to Mary",
+            "Joseph traveling to Bethlehem",
+            "No room at the inn",
+            "Baby Jesus in the manger",
+            "Shepherds in the fields",
+            "Angel choir to shepherds",
+            "Wise men following the star",
+            "Wise men presenting gifts",
+            "Holy family fleeing to Egypt",
+            "Mary visiting Elizabeth",
+            "Census in Bethlehem",
+            "Star over the stable"
+        ];
+
+        let currentPrompt = '';
+        let timerInterval;
+        let timeLeft = 60;
+        let gameActive = false;
+        let currentTeam = 1; // Start with Team 1
+
+        const promptEl = document.getElementById('prompt');
+        const timerEl = document.getElementById('timer');
+        const startBtn = document.getElementById('start-btn');
+        const nextBtn = document.getElementById('next-prompt');
+        const team1Btn = document.getElementById('team1-btn');
+        const team2Btn = document.getElementById('team2-btn');
+        const team1ScoreEl = document.getElementById('team1-score');
+        const team2ScoreEl = document.getElementById('team2-score');
+
+        let team1Score = 0;
+        let team2Score = 0;
+        let usedPrompts = new Set();
+
+        function getRandomPrompt() {
+            let available = prompts.filter((p, i) => !usedPrompts.has(i));
+            if (available.length === 0) {
+                available = prompts; // Reset if all used
+                usedPrompts.clear();
+            }
+            const randomIndex = Math.floor(Math.random() * available.length);
+            const prompt = available[randomIndex];
+            usedPrompts.add(prompts.indexOf(prompt));
+            return prompt;
+        }
+
+        function startTimer() {
+            timeLeft = 60;
+            timerEl.textContent = timeLeft;
+            gameActive = true;
+            startBtn.disabled = true;
+            nextBtn.style.display = 'none';
+            team1Btn.disabled = false;
+            team2Btn.disabled = false;
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerEl.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    gameActive = false;
+                    startBtn.disabled = false;
+                    nextBtn.style.display = 'inline-block';
+                    team1Btn.disabled = true;
+                    team2Btn.disabled = true;
+                    promptEl.textContent = 'Time\'s up! Next prompt?';
+                }
+            }, 1000);
+        }
+
+        function newPrompt() {
+            currentPrompt = getRandomPrompt();
+            promptEl.textContent = currentPrompt;
+            clearInterval(timerInterval);
+            gameActive = false;
+            startBtn.disabled = false;
+            nextBtn.style.display = 'none';
+            team1Btn.disabled = true;
+            team2Btn.disabled = true;
+        }
+
+        startBtn.addEventListener('click', () => {
+            newPrompt();
+            startTimer();
+        });
+
+        nextBtn.addEventListener('click', () => {
+            newPrompt();
+        });
+
+        team1Btn.addEventListener('click', () => {
+            if (gameActive) {
+                team1Score++;
+                team1ScoreEl.textContent = team1Score;
+                clearInterval(timerInterval);
+                gameActive = false;
+                startBtn.disabled = false;
+                nextBtn.style.display = 'inline-block';
+                team1Btn.disabled = true;
+                team2Btn.disabled = true;
+                promptEl.textContent = 'Correct! Great job, Team 1!';
+                setTimeout(() => {
+                    newPrompt();
+                }, 2000);
+            }
+        });
+
+        team2Btn.addEventListener('click', () => {
+            if (gameActive) {
+                team2Score++;
+                team2ScoreEl.textContent = team2Score;
+                clearInterval(timerInterval);
+                gameActive = false;
+                startBtn.disabled = false;
+                nextBtn.style.display = 'inline-block';
+                team1Btn.disabled = true;
+                team2Btn.disabled = true;
+                promptEl.textContent = 'Correct! Great job, Team 2!';
+                setTimeout(() => {
+                    newPrompt();
+                }, 2000);
+            }
+        });
+
+        // Initialize
+        newPrompt();
+    </script>
+</body>
+</html>
